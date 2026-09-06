@@ -1,0 +1,4 @@
+# Dependencias opcionales para lectura de documentos.
+# El flujo de ejemplo funciona con la libreria estandar de Python.
+pypdf>=4.2.0
+openpyxl>=3.1.5

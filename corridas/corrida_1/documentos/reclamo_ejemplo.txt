@@ -1,0 +1,8 @@
+Documento de respaldo del reclamo APC.
+
+Numero de incidente: INC-2026-0001.
+Fecha: 2026-09-06.
+Hora: 10:15.
+Importe: ARS 12500.50.
+Numero de cuenta: 001234567890.
+Motivo: Desconocimiento de consumo.

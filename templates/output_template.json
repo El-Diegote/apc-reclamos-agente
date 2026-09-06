@@ -1,0 +1,21 @@
+{
+  "numero_incidente": "",
+  "corrida": "",
+  "estado": "pendiente",
+  "timestamp_procesamiento": "",
+  "validaciones": {
+    "requisito_1": false,
+    "requisito_2": false,
+    "requisito_3": false,
+    "resultado_general": false
+  },
+  "datos_criticos": {
+    "fecha": "",
+    "hora": "",
+    "importe": 0.0,
+    "numero_cuenta": "",
+    "motivo": ""
+  },
+  "documentos": [],
+  "observaciones": []
+}

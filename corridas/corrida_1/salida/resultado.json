@@ -1,0 +1,23 @@
+{
+  "numero_incidente": "INC-2026-0001",
+  "corrida": "corrida_1",
+  "estado": "analizado",
+  "timestamp_procesamiento": "2026-09-06T11:18:36",
+  "validaciones": {
+    "requisito_1": true,
+    "requisito_2": true,
+    "requisito_3": true,
+    "resultado_general": true
+  },
+  "datos_criticos": {
+    "fecha": "2026-09-06",
+    "hora": "10:15",
+    "importe": 12500.5,
+    "numero_cuenta": "001234567890",
+    "motivo": "Desconocimiento de consumo"
+  },
+  "documentos": [
+    "reclamo_ejemplo.txt"
+  ],
+  "observaciones": []
+}
