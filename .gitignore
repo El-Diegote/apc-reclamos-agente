@@ -17,12 +17,29 @@ credenciales/
 *token*
 
 # Datos sensibles y documentos reales
+notebook bna/
+notebook_bna/
 corridas/**/documentos/*.pdf
 corridas/**/documentos/*.PDF
+corridas/**/documentos/*
+!corridas/**/documentos/.gitkeep
+!corridas/corrida_1/documentos/reclamo_ejemplo.txt
 corridas/**/entrada/*.pdf
 corridas/**/entrada/*.PDF
+corridas/**/entrada/*.xlsx
+corridas/**/entrada/*.xlsm
+corridas/**/entrada/*.xls
+corridas/**/entrada/*.csv
+!corridas/corrida_1/entrada/csv_diario.csv
+corridas/**/entrada/screenshots/*
+!corridas/**/entrada/screenshots/.gitkeep
+corridas/**/analisis_manual.txt
 corridas/**/entrada/datos_reales/
 corridas/**/entrada/credenciales/
+*.docx
+*.xlsx
+*.xlsm
+*.xls
 
 # Logs
 logs/

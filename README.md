@@ -2,6 +2,8 @@
 
 Proyecto Python para asistir a analistas APC en la gestion de reclamos y consultas vinculados a operaciones ATM, POS, mPOS, BNA+, MODO, Cash In, eCommerce y otros canales. El MVP combina una aplicacion desktop en CustomTkinter, un motor APC en Python, persistencia SQLite y exportacion de informes.
 
+Este proyecto no es un trabajo academico. Es una iniciativa operativa para desarrollar una herramienta de asistencia controlada para uso bancario.
+
 ## Caso de uso
 
 El caso de uso principal es asistir a un equipo de operaciones, back office o auditoria bancaria en el analisis inicial de reclamos. A partir de una base de reclamos o de un caso ingresado manualmente, la aplicacion:
@@ -168,7 +170,9 @@ apc-reclamos-agente/
 
 ## Notas de seguridad
 
-El proyecto no almacena credenciales. Los datos reales, PDFs sensibles, logs y archivos `.env` deben mantenerse fuera del repositorio.
+El proyecto no almacena credenciales. Los datos reales, capturas, PDFs, DOCX, XLSX, logs y archivos `.env` deben mantenerse fuera del repositorio.
+
+Ver tambien `docs/SEGURIDAD.md`.
 
 ## Futuro
 

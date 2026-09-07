@@ -48,3 +48,12 @@
 - La app no ejecuta acciones automaticas sin validacion humana.
 - La app no almacena credenciales.
 - La resolucion sugerida se guarda como revisada solo cuando el analista completa la revision en pantalla.
+
+## Iteracion 5 - Reencuadre operativo
+
+- Se confirma que el proyecto no es academico ni corresponde a un trabajo final.
+- El objetivo pasa a quedar formulado como iniciativa operativa para construir una herramienta de asistencia en el banco.
+- Se revisa la carpeta local `C:\apc-reclamos-agente\notebook bna` como insumo privado, sin incorporar archivos reales al repo.
+- Se documentan hallazgos sanitizados en `docs/REVISION_NOTEBOOK_BNA.md`.
+- Se agrega `docs/SEGURIDAD.md` para planificar autenticacion local, resguardo de datos y control de acceso.
+- Se refuerza `.gitignore` para evitar subir capturas, documentos, planillas y analisis manuales con datos reales.
