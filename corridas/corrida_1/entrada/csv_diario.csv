@@ -1,2 +1,2 @@
-numero_incidente,fecha,hora,importe,numero_cuenta,motivo
-INC-2026-0001,2026-09-06,10:15,12500.50,001234567890,Desconocimiento de consumo
+numero_incidente,canal,fecha,hora,importe,numero_cuenta,motivo
+INC-2026-0001,ATM,2026-09-06,10:15,12500.50,001234567890,Desconocimiento de consumo

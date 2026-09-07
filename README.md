@@ -1,22 +1,43 @@
 # APC Reclamos Agente
 
-Proyecto Python para procesar y analizar reclamos de una plataforma bancaria APC. El agente simula la busqueda de incidentes, la lectura de solapas operativas, la descarga/logica de documentacion y la generacion de una salida JSON estructurada para auditoria o revision posterior.
+Proyecto Python para asistir a analistas APC en la gestion de reclamos y consultas vinculados a operaciones ATM, POS, mPOS, BNA+, MODO, Cash In, eCommerce y otros canales. El MVP combina una aplicacion desktop en CustomTkinter, un motor APC en Python, persistencia SQLite y exportacion de informes.
 
 ## Caso de uso
 
-El caso de uso principal es asistir a un equipo de operaciones, back office o auditoria bancaria en el analisis inicial de reclamos. A partir de un numero de incidente ingresado manualmente o disponible en un CSV diario, el agente:
+El caso de uso principal es asistir a un equipo de operaciones, back office o auditoria bancaria en el analisis inicial de reclamos. A partir de una base de reclamos o de un caso ingresado manualmente, la aplicacion:
 
-- Simula la lectura de las cuatro solapas APC: Detalle, Diario, Documentacion y Auditoria.
-- Revisa documentos descargados en la carpeta de la corrida.
-- Valida tres requisitos previos configurados como reglas de negocio.
-- Extrae datos criticos: fecha, hora, importe, numero de cuenta y motivo.
-- Genera un archivo `resultado.json` en la carpeta de salida de la corrida.
+- Carga Base de Reclamos desde CSV o Excel.
+- Entrena resoluciones APC reutilizables.
+- Analiza casos por canal, motivo, importe y cuenta.
+- Genera una resolucion sugerida.
+- Genera texto sugerido para Diario.
+- Exporta un informe JSON.
+
+Toda resolucion debe ser revisada y aprobada por un analista humano antes de publicarse.
+
+## Alcance MVP
+
+Incluido:
+
+- Aplicacion desktop con CustomTkinter.
+- Backend Python modular.
+- Carga de CSV/XLSX con Pandas y OpenPyXL.
+- Persistencia local SQLite.
+- Motor de sugerencias por resoluciones entrenadas y reglas base.
+- Modo CLI para corrida simulada.
+
+No incluido:
+
+- Modificacion de informacion en APC.
+- Acciones automaticas sin validacion humana.
+- Almacenamiento de credenciales.
+- Web scraping real con Playwright o Selenium.
 
 ## Requisitos previos
 
-- Python 3.10 o superior.
+- Python 3.11 recomendado.
 - Entorno virtual recomendado.
-- Dependencias instaladas desde `requirements.txt` si se desea leer PDF o Excel.
+- Dependencias instaladas desde `requirements.txt`.
 
 Las librerias estandar como `json`, `logging`, `pathlib`, `csv`, `re` y `datetime` no requieren instalacion adicional.
 
@@ -35,18 +56,30 @@ En macOS o Linux:
 source .venv/bin/activate
 ```
 
-## Como ejecutar
-
-Ejecutar una corrida de ejemplo:
+## Como ejecutar la app desktop
 
 ```bash
 python main.py
 ```
 
+Si falta CustomTkinter o Pandas:
+
+```bash
+pip install -r requirements.txt
+```
+
+## Como ejecutar modo CLI
+
+Ejecutar una corrida de ejemplo:
+
+```bash
+python main.py --cli
+```
+
 Ejecutar con un incidente especifico:
 
 ```bash
-python main.py --incidente INC-2026-0001 --corrida corrida_1
+python main.py --cli --incidente INC-2026-0001 --corrida corrida_1
 ```
 
 La salida se guarda en:
@@ -60,8 +93,15 @@ corridas/corrida_1/salida/resultado.json
 Archivo `corridas/corrida_1/entrada/csv_diario.csv`:
 
 ```csv
-numero_incidente,fecha,hora,importe,numero_cuenta,motivo
-INC-2026-0001,2026-09-06,10:15,12500.50,001234567890,Desconocimiento de consumo
+numero_incidente,canal,fecha,hora,importe,numero_cuenta,motivo
+INC-2026-0001,ATM,2026-09-06,10:15,12500.50,001234567890,Desconocimiento de consumo
+```
+
+Para cargar una base desde la app desktop, el archivo puede incluir columnas como:
+
+```csv
+numero_incidente,canal,fecha,hora,importe,numero_cuenta,motivo
+INC-2026-0001,ATM,2026-09-06,10:15,12500.50,001234567890,Desconocimiento de consumo
 ```
 
 ## Ejemplo de salida
@@ -69,6 +109,7 @@ INC-2026-0001,2026-09-06,10:15,12500.50,001234567890,Desconocimiento de consumo
 ```json
 {
   "numero_incidente": "INC-2026-0001",
+  "canal": "ATM",
   "estado": "analizado",
   "validaciones": {
     "requisito_1": true,
@@ -95,6 +136,8 @@ apc-reclamos-agente/
 ├── DECISIONES.md
 ├── main.py
 ├── requirements.txt
+├── data/
+├── exports/
 ├── prompts/
 │   ├── system_prompt.md
 │   └── user_prompt.md
@@ -112,7 +155,10 @@ apc-reclamos-agente/
 │   ├── __init__.py
 │   ├── agente.py
 │   ├── analizador.py
+│   ├── app_desktop.py
+│   ├── database.py
 │   ├── extractor.py
+│   ├── motor_apc.py
 │   └── utils.py
 ├── config/
 │   └── config.py
@@ -123,3 +169,10 @@ apc-reclamos-agente/
 ## Notas de seguridad
 
 El proyecto no almacena credenciales. Los datos reales, PDFs sensibles, logs y archivos `.env` deben mantenerse fuera del repositorio.
+
+## Futuro
+
+- Integracion Playwright para lectura asistida de APC.
+- Lectura de PDFs reales con reglas documentadas.
+- Base vectorial ChromaDB para resoluciones historicas.
+- Integracion con APIs de analisis inteligente, manteniendo revision humana obligatoria.

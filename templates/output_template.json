@@ -3,6 +3,7 @@
   "corrida": "",
   "estado": "pendiente",
   "timestamp_procesamiento": "",
+  "canal": "",
   "validaciones": {
     "requisito_1": false,
     "requisito_2": false,
@@ -16,6 +17,11 @@
     "numero_cuenta": "",
     "motivo": ""
   },
+  "resolucion_sugerida": "",
+  "texto_diario": "",
+  "requiere_aprobacion_humana": true,
+  "aprobado": false,
+  "analista_revisor": "",
   "documentos": [],
   "observaciones": []
 }

@@ -34,3 +34,17 @@
 - Se usa logging en todos los puntos de accion o error para facilitar auditoria.
 - La salida JSON sigue un template versionado en `templates/output_template.json`.
 - El codigo prioriza legibilidad y trazabilidad por encima de optimizaciones prematuras.
+
+## Iteracion 4 - MVP desktop
+
+- Se agrego una aplicacion de escritorio con CustomTkinter para que el analista pueda operar sin consola.
+- Se incorporo `MotorAPC` como capa de negocio para cargar bases, entrenar resoluciones, analizar casos, generar textos y exportar informes.
+- Se agrego `RepositorioAPC` con SQLite para persistir resoluciones entrenadas, bases cargadas y casos revisados.
+- `main.py` abre la app desktop por defecto y mantiene `--cli` para la corrida simulada.
+
+## Restricciones operativas del MVP
+
+- La app no modifica informacion en APC.
+- La app no ejecuta acciones automaticas sin validacion humana.
+- La app no almacena credenciales.
+- La resolucion sugerida se guarda como revisada solo cuando el analista completa la revision en pantalla.

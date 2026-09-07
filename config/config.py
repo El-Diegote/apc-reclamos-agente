@@ -8,8 +8,11 @@ PROMPTS_DIR: Path = ROOT_DIR / "prompts"
 CORRIDAS_DIR: Path = ROOT_DIR / "corridas"
 TEMPLATES_DIR: Path = ROOT_DIR / "templates"
 LOGS_DIR: Path = ROOT_DIR / "logs"
+DATA_DIR: Path = ROOT_DIR / "data"
+EXPORTS_DIR: Path = ROOT_DIR / "exports"
 
 OUTPUT_TEMPLATE_PATH: Path = TEMPLATES_DIR / "output_template.json"
+SQLITE_DB_PATH: Path = DATA_DIR / "apc_reclamos.db"
 
 DEFAULT_CORRIDA: str = "corrida_1"
 DEFAULT_CSV_NAME: str = "csv_diario.csv"
@@ -34,4 +37,21 @@ DOCUMENT_EXTENSIONS: tuple[str, ...] = (
     ".xlsx",
     ".xlsm",
     ".csv",
+)
+
+BASE_RECLAMOS_EXTENSIONS: tuple[str, ...] = (
+    ".csv",
+    ".xlsx",
+    ".xlsm",
+)
+
+CANALES_APC: tuple[str, ...] = (
+    "ATM",
+    "POS",
+    "mPOS",
+    "BNA+",
+    "MODO",
+    "Cash In",
+    "eCommerce",
+    "Otros",
 )

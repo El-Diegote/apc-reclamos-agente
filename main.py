@@ -1,4 +1,4 @@
-"""Script de ejemplo para ejecutar el agente APC Reclamos."""
+"""Punto de entrada del MVP APC Reclamos."""
 
 from __future__ import annotations
 
@@ -33,14 +33,19 @@ def parse_args() -> argparse.Namespace:
     Returns:
         Namespace con argumentos de ejecucion.
     """
-    parser = argparse.ArgumentParser(description="Procesa reclamos APC simulados.")
+    parser = argparse.ArgumentParser(description="Ejecuta APC Reclamos Agente.")
+    parser.add_argument(
+        "--cli",
+        action="store_true",
+        help="Ejecuta la corrida simulada por consola en lugar de abrir la app desktop.",
+    )
     parser.add_argument("--incidente", help="Numero de incidente a procesar.")
     parser.add_argument("--corrida", default=DEFAULT_CORRIDA, help="Carpeta de corrida a usar.")
     return parser.parse_args()
 
 
-def main() -> int:
-    """Ejecuta una corrida completa del agente.
+def ejecutar_cli(args: argparse.Namespace) -> int:
+    """Ejecuta una corrida completa del agente por consola.
 
     Returns:
         Codigo de salida del proceso.
@@ -73,6 +78,33 @@ def main() -> int:
         logger.exception("Error inesperado durante la corrida.")
         print(f"Error inesperado: {exc}", file=sys.stderr)
         return 3
+
+
+def main() -> int:
+    """Ejecuta la app desktop o el modo CLI.
+
+    Returns:
+        Codigo de salida del proceso.
+    """
+    configurar_logging()
+    args = parse_args()
+
+    if args.cli:
+        return ejecutar_cli(args)
+
+    try:
+        from src.app_desktop import ejecutar_app
+
+        ejecutar_app()
+        return 0
+    except ModuleNotFoundError as exc:
+        if exc.name == "customtkinter":
+            print(
+                "Falta instalar CustomTkinter. Ejecute: pip install -r requirements.txt",
+                file=sys.stderr,
+            )
+            return 4
+        raise
 
 
 if __name__ == "__main__":

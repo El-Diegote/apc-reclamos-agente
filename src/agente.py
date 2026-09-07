@@ -121,6 +121,7 @@ class Agente:
         self.solapas = {
             "detalle": {
                 "numero_incidente": self.numero_incidente,
+                "canal": fila.get("canal", "Otros"),
                 "motivo": fila.get("motivo", "Motivo no informado"),
                 "numero_cuenta": fila.get("numero_cuenta", ""),
             },
@@ -212,8 +213,14 @@ class Agente:
                 "corrida": self.corrida,
                 "estado": "analizado",
                 "timestamp_procesamiento": timestamp_actual(),
+                "canal": self.solapas.get("detalle", {}).get("canal", ""),
                 "validaciones": validaciones,
                 "datos_criticos": datos_criticos,
+                "resolucion_sugerida": "",
+                "texto_diario": "",
+                "requiere_aprobacion_humana": True,
+                "aprobado": False,
+                "analista_revisor": "",
                 "documentos": [Path(doc).name for doc in self.documentos],
                 "observaciones": self.solapas.get("auditoria", {}).get("observaciones", []),
             }

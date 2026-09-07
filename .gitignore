@@ -28,6 +28,14 @@ corridas/**/entrada/credenciales/
 logs/
 *.log
 
+# Persistencia y exportaciones locales
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+exports/*.json
+exports/*.xlsx
+exports/*.csv
+
 # Python
 __pycache__/
 *.py[cod]
