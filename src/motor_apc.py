@@ -32,6 +32,7 @@ class MotorAPC:
         """
         self.logger = logger or logging.getLogger(self.__class__.__name__)
         self.repositorio = repositorio or RepositorioAPC(logger=self.logger)
+        self.coeficiente_dolar = 1.0
 
     def cargar_base_reclamos(self, archivo: Path) -> int:
         """Carga una base de reclamos desde CSV o Excel.
@@ -101,6 +102,7 @@ class MotorAPC:
         for hoja in excel.sheet_names:
             dataframe = pd.read_excel(archivo, sheet_name=hoja)
             dataframe = dataframe.dropna(how="all").dropna(axis=1, how="all")
+            self._actualizar_coeficiente_dolar(dataframe)
             columnas = {str(columna).strip().upper(): columna for columna in dataframe.columns}
 
             if "TEMA" not in columnas or "NOTA" not in columnas:
@@ -158,6 +160,7 @@ class MotorAPC:
             "texto_diario": texto_diario,
             "tema_diario": tema_diario,
             "detalle_diario": detalle_diario,
+            "coeficiente_dolar": self.coeficiente_dolar,
             "fuente_sugerencia": fuente,
             "requiere_aprobacion_humana": True,
             "aprobado": False,
@@ -197,6 +200,7 @@ class MotorAPC:
             f"Analisis APC - Incidente {caso.get('numero_incidente', '')}. "
             f"Afectado: {caso.get('nombre_apellido', '')}. "
             f"Canal: {caso.get('canal', '')}. "
+            f"Moneda: {caso.get('moneda', 'Peso')}. "
             f"Cuenta: {caso.get('numero_cuenta', '')}. "
             f"Importe reclamado: {importe:.2f}. "
             f"Resultado sugerido: {resolucion}"
@@ -429,8 +433,20 @@ class MotorAPC:
                 self._obtener_valor(normalizado, ["hora", "hora trx", "hora operacion"]) or ""
             ).strip(),
             "importe": parsear_importe(importe),
+            "moneda": str(self._obtener_valor(normalizado, ["moneda", "divisa"]) or "Peso").strip(),
             "numero_cuenta": self._normalizar_cuenta(cuenta),
         }
+
+    def convertir_dolar_a_peso(self, importe: float) -> float:
+        """Convierte un importe en dolares a pesos segun el coeficiente vigente.
+
+        Args:
+            importe: Importe expresado en dolares.
+
+        Returns:
+            Importe convertido a pesos.
+        """
+        return importe * self.coeficiente_dolar
 
     def _calcular_importe_transacciones(self, filas: list[dict[str, Any]]) -> float:
         """Suma importes marcados; si no hay marca, usa el primer importe disponible.
@@ -526,6 +542,46 @@ class MotorAPC:
         texto = "".join(caracter for caracter in texto if not unicodedata.combining(caracter))
         texto = re.sub(r"[^a-zA-Z0-9$]+", " ", texto).strip().lower()
         return re.sub(r"\s+", " ", texto)
+
+    def _actualizar_coeficiente_dolar(self, dataframe: pd.DataFrame) -> None:
+        """Busca y actualiza el coeficiente dolar desde RESOLUCIONES APC.
+
+        Args:
+            dataframe: Hoja del Excel de resoluciones.
+        """
+        if dataframe.empty:
+            return
+
+        columnas = {self._normalizar_clave(columna): columna for columna in dataframe.columns}
+        columna_coeficiente = self._buscar_columna(
+            columnas,
+            ["coeficiente dolar", "coeficiente_dolar", "coef dolar", "dolar"],
+        )
+        if columna_coeficiente is None:
+            return
+
+        for valor in dataframe[columna_coeficiente].dropna():
+            coeficiente = parsear_importe(valor)
+            if coeficiente > 0:
+                self.coeficiente_dolar = coeficiente
+                self.logger.info("Coeficiente dolar actualizado desde Excel de resoluciones")
+                return
+
+    def _buscar_columna(self, columnas: dict[str, Any], aliases: list[str]) -> Any:
+        """Busca una columna por aliases normalizados.
+
+        Args:
+            columnas: Mapa de columnas normalizadas a columnas originales.
+            aliases: Nombres posibles.
+
+        Returns:
+            Columna original encontrada o `None`.
+        """
+        for alias in aliases:
+            columna = columnas.get(self._normalizar_clave(alias))
+            if columna is not None:
+                return columna
+        return None
 
     def _obtener_valor(self, normalizado: dict[str, Any], aliases: list[str]) -> Any:
         """Busca el primer valor no vacio entre aliases de columna.

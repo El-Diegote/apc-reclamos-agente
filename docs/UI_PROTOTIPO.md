@@ -13,10 +13,11 @@ La primera version vuelve a una unica vista con el caso actual, un panel de reso
 El panel izquierdo muestra el incidente APC sobre el que esta trabajando el analista:
 
 - `Incidente`: numero de operacion/incidente APC.
-- `Nombre y Apellido`: persona afectada en el reclamo.
-- `Canal / Tema`: valor que surge del campo `TEMA` del Excel `RESOLUCIONES APC`.
-- `Motivo / Detalle`: detalle asociado al tema o motivo operativo del reclamo.
+- `Cliente`: persona afectada en el reclamo.
+- `Canal`: valor que surge del campo `TEMA` del Excel `RESOLUCIONES APC` o del canal detectado en la base.
+- `Motivo`: detalle asociado al tema o motivo operativo del reclamo.
 - `Importe`: suma de transacciones marcadas en la base local, tomando la columna `Importe $` cuando existe.
+- `Moneda`: selector entre `Peso` y `Dolar`; cuando se elige `Dolar`, el importe se convierte con el `COEFICIENTE DOLAR` leido desde `RESOLUCIONES APC`.
 - `Cuenta`: cuenta desde normalizada a 14 digitos.
 
 ## Resolucion actual
@@ -24,15 +25,17 @@ El panel izquierdo muestra el incidente APC sobre el que esta trabajando el anal
 El panel derecho muestra lo que se va a completar en la solapa `Diario` de APC:
 
 - `Tema`: se completa con el `TEMA` entrenado desde `RESOLUCIONES APC`.
-- `Detalle / Nota`: se completa con la `NOTA` equivalente a la fila elegida del Excel de resoluciones.
+- `Detalle`: se completa con la `NOTA` equivalente a la fila elegida del Excel de resoluciones.
+- `Editar`: habilita cambios manuales sobre el detalle sugerido.
+- `Deshacer`: revierte el ultimo cambio realizado sobre el detalle.
 
 ## Botones funcionales
 
 - `Cargar Base`: selecciona una base CSV/XLSX local y toma el primer incidente.
 - `Pegar Nro en APC`: copia el incidente y, luego de 3 segundos, envia `Ctrl+V` al campo activo para pegar en `Nro de Operacion`.
-- `Leer y Analizar`: lee documentos locales ya descargados y completa `Tema` y `Detalle / Nota`.
+- `Leer y Analizar`: lee documentos locales ya descargados y completa `Tema` y `Detalle`.
 - `Documentacion`: abre la carpeta local de documentos y copia la ruta para descargar alli desde APC.
-- `Copiar Diario`: copia `Tema` y `Detalle / Nota` para pegarlos manualmente en APC luego de revisarlos.
+- `Copiar Diario`: copia `Tema` y `Detalle` para pegarlos manualmente en APC luego de revisarlos.
 
 ## Limite actual
 

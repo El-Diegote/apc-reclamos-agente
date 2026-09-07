@@ -66,3 +66,10 @@
 - La descarga automatica desde APC queda fuera de esta version hasta mapear con capturas la solapa `Documentacion`.
 - Se agrega `docs/PROMPT_CAPTURAS_APC.md` para relevar pantallas y detalles necesarios sin exponer informacion confidencial.
 - Regla operativa: no se sube ningun dato real o archivo confidencial sin autorizacion y validacion previa del titular.
+
+## Iteracion 7 - Ajuste de campos operativos
+
+- Se renombran campos de la vista simple: `Cliente`, `Canal`, `Motivo` y `Detalle`.
+- Se agrega selector `Moneda` junto a `Importe`, con conversion de `Dolar` mediante `COEFICIENTE DOLAR` del Excel `RESOLUCIONES APC`.
+- El campo `Detalle` queda bloqueado por defecto y se habilita con `Editar`.
+- Se agrega `Deshacer` para revertir cambios manuales sobre el detalle antes de copiarlo a APC.

@@ -14,6 +14,7 @@ import pandas as pd
 from config.config import CORRIDAS_DIR, DEFAULT_CORRIDA
 from src.extractor import Extractor
 from src.motor_apc import MotorAPC
+from src.utils import parsear_importe
 
 
 class APCDesktopApp(ctk.CTk):
@@ -33,6 +34,10 @@ class APCDesktopApp(ctk.CTk):
         self.caso_actual: dict[str, Any] | None = None
         self.ultimo_analisis: dict[str, Any] | None = None
         self.documentos_dir = CORRIDAS_DIR / DEFAULT_CORRIDA / "documentos"
+        self.importe_base = 0.0
+        self.moneda_previa = "Peso"
+        self.detalle_editable = False
+        self.detalle_historial: list[str] = []
 
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
@@ -91,10 +96,11 @@ class APCDesktopApp(ctk.CTk):
         caso.grid_columnconfigure(1, weight=1)
 
         self.incidente_var = ctk.StringVar(value="")
-        self.nombre_apellido_var = ctk.StringVar(value="")
+        self.cliente_var = ctk.StringVar(value="")
         self.canal_var = ctk.StringVar(value="")
         self.motivo_var = ctk.StringVar(value="")
         self.importe_var = ctk.StringVar(value="")
+        self.moneda_var = ctk.StringVar(value="Peso")
         self.cuenta_var = ctk.StringVar(value="")
         self.tema_diario_var = ctk.StringVar(value="")
 
@@ -102,10 +108,10 @@ class APCDesktopApp(ctk.CTk):
             row=0, column=0, columnspan=2, padx=14, pady=(14, 8), sticky="w"
         )
         self._campo(caso, "Incidente", self.incidente_var, 1)
-        self._campo(caso, "Nombre y Apellido", self.nombre_apellido_var, 2)
-        self._campo(caso, "Canal / Tema", self.canal_var, 3)
-        self._campo(caso, "Motivo / Detalle", self.motivo_var, 4)
-        self._campo(caso, "Importe", self.importe_var, 5)
+        self._campo(caso, "Cliente", self.cliente_var, 2)
+        self._campo(caso, "Canal", self.canal_var, 3)
+        self._campo(caso, "Motivo", self.motivo_var, 4)
+        self._campo_importe_moneda(caso, 5)
         self._campo(caso, "Cuenta", self.cuenta_var, 6)
         ctk.CTkButton(caso, text="Siguiente reclamo", command=self._siguiente_reclamo).grid(
             row=7, column=1, padx=14, pady=(10, 14), sticky="e"
@@ -124,19 +130,37 @@ class APCDesktopApp(ctk.CTk):
         ctk.CTkEntry(salida, textvariable=self.tema_diario_var).grid(
             row=2, column=0, padx=14, pady=(0, 10), sticky="ew"
         )
-        ctk.CTkLabel(salida, text="Detalle / Nota").grid(
-            row=3, column=0, padx=14, pady=(0, 4), sticky="nw"
-        )
+        detalle_header = ctk.CTkFrame(salida, fg_color="transparent")
+        detalle_header.grid(row=3, column=0, padx=14, pady=(0, 4), sticky="ew")
+        detalle_header.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(detalle_header, text="Detalle").grid(row=0, column=0, sticky="w")
+        ctk.CTkButton(
+            detalle_header,
+            text="Editar",
+            width=80,
+            height=30,
+            command=self._habilitar_edicion_detalle,
+        ).grid(row=0, column=1, padx=(8, 0), sticky="e")
+        ctk.CTkButton(
+            detalle_header,
+            text="Deshacer",
+            width=90,
+            height=30,
+            command=self._deshacer_detalle,
+        ).grid(row=0, column=2, padx=(8, 0), sticky="e")
         self.resultado_text = ctk.CTkTextbox(salida, height=300)
         self.resultado_text.grid(row=4, column=0, padx=14, pady=(0, 14), sticky="nsew")
+        self.resultado_text.bind("<KeyRelease>", self._registrar_cambio_detalle)
         self.resultado_text.insert(
             "1.0",
             "Esperando accion.\n\n"
             "1. Cargue la Base de Reclamos.\n"
             "2. Pegue el Nro en APC.\n"
             "3. Busque el incidente en APC.\n"
-            "4. Use Leer y Analizar para completar Tema y Detalle Diario.",
+            "4. Use Leer y Analizar para completar Tema y Detalle.",
         )
+        self.resultado_text.configure(state="disabled")
+        self.detalle_historial = [self.resultado_text.get("1.0", "end").strip()]
 
         footer = ctk.CTkFrame(self, fg_color="#111827")
         footer.grid(row=3, column=0, padx=16, pady=(0, 16), sticky="ew")
@@ -162,6 +186,26 @@ class APCDesktopApp(ctk.CTk):
         ctk.CTkEntry(parent, textvariable=variable).grid(
             row=row, column=1, padx=14, pady=8, sticky="ew"
         )
+
+    def _campo_importe_moneda(self, parent: ctk.CTkFrame, row: int) -> None:
+        """Crea el campo de importe con selector de moneda."""
+        ctk.CTkLabel(parent, text="Importe").grid(row=row, column=0, padx=14, pady=8, sticky="w")
+        contenedor = ctk.CTkFrame(parent, fg_color="transparent")
+        contenedor.grid(row=row, column=1, padx=14, pady=8, sticky="ew")
+        contenedor.grid_columnconfigure(0, weight=1)
+        contenedor.grid_columnconfigure(1, weight=0)
+        ctk.CTkLabel(contenedor, text="").grid(row=0, column=0, sticky="w")
+        ctk.CTkLabel(contenedor, text="Moneda").grid(row=0, column=1, sticky="w")
+        ctk.CTkEntry(contenedor, textvariable=self.importe_var).grid(
+            row=1, column=0, padx=(0, 8), sticky="ew"
+        )
+        ctk.CTkOptionMenu(
+            contenedor,
+            values=["Peso", "Dolar"],
+            variable=self.moneda_var,
+            width=120,
+            command=self._cambiar_moneda,
+        ).grid(row=1, column=1, sticky="e")
 
     def _cargar_base(self) -> None:
         """Carga una base local y toma el primer reclamo."""
@@ -189,10 +233,13 @@ class APCDesktopApp(ctk.CTk):
             return
         self.caso_actual = self.registros[self.indice_actual]
         self.incidente_var.set(str(self.caso_actual.get("numero_incidente", "")))
-        self.nombre_apellido_var.set(str(self.caso_actual.get("nombre_apellido", "")))
+        self.cliente_var.set(str(self.caso_actual.get("nombre_apellido", "")))
         self.canal_var.set(str(self.caso_actual.get("canal", "Otros")))
         self.motivo_var.set(str(self.caso_actual.get("motivo", "")))
-        self.importe_var.set(str(self.caso_actual.get("importe", "")))
+        self.importe_base = float(self.caso_actual.get("importe") or 0)
+        self.moneda_var.set(str(self.caso_actual.get("moneda", "Peso") or "Peso"))
+        self._actualizar_importe_por_moneda()
+        self.moneda_previa = self.moneda_var.get()
         self.cuenta_var.set(str(self.caso_actual.get("numero_cuenta", "")))
         self.tema_diario_var.set("")
         self._set_text("Resolucion pendiente. Use Leer y Analizar cuando el incidente este abierto en APC.")
@@ -283,10 +330,11 @@ class APCDesktopApp(ctk.CTk):
         """Construye un caso desde los campos visibles."""
         return {
             "numero_incidente": self.incidente_var.get().strip(),
-            "nombre_apellido": self.nombre_apellido_var.get().strip(),
+            "nombre_apellido": self.cliente_var.get().strip(),
             "canal": self.canal_var.get().strip(),
             "motivo": self.motivo_var.get().strip(),
             "importe": self.importe_var.get().strip(),
+            "moneda": self.moneda_var.get().strip(),
             "numero_cuenta": self.cuenta_var.get().strip(),
         }
 
@@ -317,8 +365,63 @@ class APCDesktopApp(ctk.CTk):
 
     def _set_text(self, texto: str) -> None:
         """Reemplaza el panel de resultado."""
+        self.resultado_text.configure(state="normal")
         self.resultado_text.delete("1.0", "end")
         self.resultado_text.insert("1.0", texto)
+        self.detalle_editable = False
+        self.resultado_text.configure(state="disabled")
+        self.detalle_historial = [texto.strip()]
+
+    def _habilitar_edicion_detalle(self) -> None:
+        """Permite editar manualmente el detalle sugerido."""
+        self.detalle_editable = True
+        self.resultado_text.configure(state="normal")
+        texto_actual = self.resultado_text.get("1.0", "end").strip()
+        if not self.detalle_historial or self.detalle_historial[-1] != texto_actual:
+            self.detalle_historial.append(texto_actual)
+        self._actualizar_estado("Detalle habilitado para edicion manual.")
+
+    def _registrar_cambio_detalle(self, _event: Any = None) -> None:
+        """Guarda cambios del detalle para poder deshacer."""
+        if not self.detalle_editable:
+            return
+        texto_actual = self.resultado_text.get("1.0", "end").strip()
+        if not self.detalle_historial or self.detalle_historial[-1] != texto_actual:
+            self.detalle_historial.append(texto_actual)
+
+    def _deshacer_detalle(self) -> None:
+        """Revierte el ultimo cambio manual del detalle."""
+        if len(self.detalle_historial) <= 1:
+            self._actualizar_estado("No hay cambios de Detalle para deshacer.")
+            return
+        self.detalle_historial.pop()
+        texto_anterior = self.detalle_historial[-1]
+        self.resultado_text.configure(state="normal")
+        self.resultado_text.delete("1.0", "end")
+        self.resultado_text.insert("1.0", texto_anterior)
+        if not self.detalle_editable:
+            self.resultado_text.configure(state="disabled")
+        self._actualizar_estado("Ultimo cambio del Detalle deshecho.")
+
+    def _cambiar_moneda(self, moneda: str) -> None:
+        """Aplica conversion al cambiar la moneda visible."""
+        importe_actual = parsear_importe(self.importe_var.get())
+        if importe_actual > 0 and self.moneda_previa == "Peso":
+            self.importe_base = importe_actual
+        self._actualizar_importe_por_moneda()
+        self.moneda_previa = moneda
+
+    def _actualizar_importe_por_moneda(self) -> None:
+        """Actualiza el importe visible segun la moneda seleccionada."""
+        moneda = self.moneda_var.get()
+        if moneda == "Dolar":
+            convertido = self.motor.convertir_dolar_a_peso(self.importe_base)
+            self.importe_var.set(f"{convertido:.2f}")
+            self._actualizar_estado(
+                f"Importe convertido desde Dolar con coeficiente {self.motor.coeficiente_dolar:.4f}."
+            )
+            return
+        self.importe_var.set(f"{self.importe_base:.2f}" if self.importe_base else "")
 
 
 def ejecutar_app() -> None:
