@@ -81,6 +81,50 @@ class MotorAPC:
             texto_diario=texto_diario.strip(),
         )
 
+    def entrenar_desde_excel_resoluciones(self, archivo: Path) -> int:
+        """Entrena resoluciones desde un Excel local con columnas TEMA y NOTA.
+
+        Args:
+            archivo: Ruta local del archivo de resoluciones APC.
+
+        Returns:
+            Cantidad de resoluciones entrenadas.
+
+        Raises:
+            ValueError: Si el archivo no contiene hojas aprovechables.
+        """
+        entrenadas = 0
+        excel = pd.ExcelFile(archivo)
+
+        for hoja in excel.sheet_names:
+            dataframe = pd.read_excel(archivo, sheet_name=hoja)
+            dataframe = dataframe.dropna(how="all").dropna(axis=1, how="all")
+            columnas = {str(columna).strip().upper(): columna for columna in dataframe.columns}
+
+            if "TEMA" not in columnas or "NOTA" not in columnas:
+                self.logger.info("Hoja omitida sin TEMA/NOTA: %s", hoja)
+                continue
+
+            for _, fila in dataframe.iterrows():
+                tema = str(fila.get(columnas["TEMA"], "") or "").strip()
+                nota = str(fila.get(columnas["NOTA"], "") or "").strip()
+                if not tema or not nota or tema.lower() == "nan" or nota.lower() == "nan":
+                    continue
+
+                self.repositorio.entrenar_resolucion(
+                    canal=self._inferir_canal_desde_tema(tema),
+                    motivo=tema,
+                    texto_resolucion=nota,
+                    texto_diario=self._generar_diario_desde_nota(tema, nota),
+                )
+                entrenadas += 1
+
+        if entrenadas == 0:
+            raise ValueError("No se encontraron resoluciones con columnas TEMA y NOTA.")
+
+        self.logger.info("Resoluciones entrenadas desde Excel: %s", entrenadas)
+        return entrenadas
+
     def analizar_caso(self, caso: dict[str, Any]) -> dict[str, Any]:
         """Analiza un caso y genera sugerencias revisables.
 
@@ -195,6 +239,39 @@ class MotorAPC:
         self.logger.info("Informe exportado: %s", destino)
         return destino
 
+    def exportar_texto_diario(self, texto_diario: str, formato: str = "txt") -> Path:
+        """Exporta el texto Diario editado por el analista.
+
+        Args:
+            texto_diario: Texto final revisado.
+            formato: Formato de salida, `txt` o `docx`.
+
+        Returns:
+            Ruta del archivo exportado.
+
+        Raises:
+            ValueError: Si el formato no esta soportado.
+        """
+        EXPORTS_DIR.mkdir(parents=True, exist_ok=True)
+        timestamp = timestamp_actual().replace(":", "-")
+
+        if formato == "txt":
+            destino = EXPORTS_DIR / f"texto_diario_{timestamp}.txt"
+            destino.write_text(texto_diario, encoding="utf-8")
+            return destino
+
+        if formato == "docx":
+            from docx import Document
+
+            destino = EXPORTS_DIR / f"texto_diario_{timestamp}.docx"
+            documento = Document()
+            documento.add_heading("Texto Diario APC", level=1)
+            documento.add_paragraph(texto_diario)
+            documento.save(destino)
+            return destino
+
+        raise ValueError(f"Formato no soportado: {formato}")
+
     def listar_resoluciones(self) -> list[dict[str, Any]]:
         """Lista resoluciones entrenadas.
 
@@ -202,6 +279,17 @@ class MotorAPC:
             Resoluciones disponibles.
         """
         return self.repositorio.listar_resoluciones()
+
+    def normalizar_registro_publico(self, fila: dict[str, Any]) -> dict[str, Any]:
+        """Normaliza un registro para usarlo desde la interfaz.
+
+        Args:
+            fila: Registro original.
+
+        Returns:
+            Registro normalizado.
+        """
+        return self._normalizar_registro(fila)
 
     def _buscar_mejor_resolucion(self, caso: dict[str, Any]) -> dict[str, Any] | None:
         """Busca una resolucion entrenada compatible con el caso.
@@ -239,6 +327,11 @@ class MotorAPC:
                 normalizado.get("numero_incidente")
                 or normalizado.get("incidente")
                 or normalizado.get("nro_incidente")
+                or normalizado.get("nro de operacion")
+                or normalizado.get("nro de operación")
+                or normalizado.get("nro_operacion")
+                or normalizado.get("numero_operacion")
+                or normalizado.get("numero de operacion")
                 or ""
             ),
             "canal": str(normalizado.get("canal") or "Otros"),
@@ -253,3 +346,41 @@ class MotorAPC:
                 or ""
             ),
         }
+
+    def _inferir_canal_desde_tema(self, tema: str) -> str:
+        """Infiere canal APC a partir del tema de una resolucion.
+
+        Args:
+            tema: Tema textual de la resolucion.
+
+        Returns:
+            Canal normalizado.
+        """
+        tema_upper = tema.upper()
+        if "ATM" in tema_upper:
+            return "ATM"
+        if "MPOS" in tema_upper:
+            return "mPOS"
+        if "POS" in tema_upper:
+            return "POS"
+        if "BNA" in tema_upper:
+            return "BNA+"
+        if "MODO" in tema_upper:
+            return "MODO"
+        if "CASH" in tema_upper:
+            return "Cash In"
+        if "ECOMMERCE" in tema_upper or "LINKGO" in tema_upper:
+            return "eCommerce"
+        return "Otros"
+
+    def _generar_diario_desde_nota(self, tema: str, nota: str) -> str:
+        """Genera una base editable para Diario a partir de una nota.
+
+        Args:
+            tema: Tema de resolucion.
+            nota: Nota de resolucion.
+
+        Returns:
+            Texto Diario sugerido.
+        """
+        return f"Se analiza caso APC bajo tema '{tema}'. Resolucion sugerida: {nota}"

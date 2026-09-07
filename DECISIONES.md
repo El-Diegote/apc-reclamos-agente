@@ -57,3 +57,12 @@
 - Se documentan hallazgos sanitizados en `docs/REVISION_NOTEBOOK_BNA.md`.
 - Se agrega `docs/SEGURIDAD.md` para planificar autenticacion local, resguardo de datos y control de acceso.
 - Se refuerza `.gitignore` para evitar subir capturas, documentos, planillas y analisis manuales con datos reales.
+
+## Iteracion 6 - Cierre V1 prototipo simple
+
+- Se aprueba una primera version simple de la aplicacion como ventana companera de APC.
+- La app queda en una sola vista con cinco botones: `Cargar Base`, `Pegar Nro en APC`, `Leer y Analizar`, `Documentacion` y `Copiar Diario`.
+- El pegado en APC se implementa como asistencia controlada: copia al portapapeles y pega en el campo activo despues de una pausa breve.
+- La descarga automatica desde APC queda fuera de esta version hasta mapear con capturas la solapa `Documentacion`.
+- Se agrega `docs/PROMPT_CAPTURAS_APC.md` para relevar pantallas y detalles necesarios sin exponer informacion confidencial.
+- Regla operativa: no se sube ningun dato real o archivo confidencial sin autorizacion y validacion previa del titular.

@@ -27,6 +27,8 @@ Incluido:
 - Persistencia local SQLite.
 - Motor de sugerencias por resoluciones entrenadas y reglas base.
 - Modo CLI para corrida simulada.
+- Ventana simple para operar en paralelo con APC.
+- Botones funcionales iniciales: cargar base, pegar numero en APC, leer y analizar, preparar documentacion y copiar texto Diario.
 
 No incluido:
 
@@ -173,6 +175,8 @@ apc-reclamos-agente/
 El proyecto no almacena credenciales. Los datos reales, capturas, PDFs, DOCX, XLSX, logs y archivos `.env` deben mantenerse fuera del repositorio.
 
 Ver tambien `docs/SEGURIDAD.md`.
+
+El mapeo de pantallas APC debe hacerse con datos sensibles tapados. Ver `docs/PROMPT_CAPTURAS_APC.md`.
 
 ## Futuro
 
