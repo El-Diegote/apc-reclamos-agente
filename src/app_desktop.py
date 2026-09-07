@@ -11,7 +11,7 @@ from typing import Any
 import customtkinter as ctk
 import pandas as pd
 
-from config.config import CANALES_APC, CORRIDAS_DIR, DEFAULT_CORRIDA
+from config.config import CORRIDAS_DIR, DEFAULT_CORRIDA
 from src.extractor import Extractor
 from src.motor_apc import MotorAPC
 
@@ -37,8 +37,8 @@ class APCDesktopApp(ctk.CTk):
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
         self.title("APC Reclamos Agente")
-        self.geometry("980x620")
-        self.minsize(880, 560)
+        self.geometry("1020x680")
+        self.minsize(920, 620)
 
         self._crear_layout()
         self._actualizar_estado("Cargue una base o ingrese un caso manual.")
@@ -91,44 +91,51 @@ class APCDesktopApp(ctk.CTk):
         caso.grid_columnconfigure(1, weight=1)
 
         self.incidente_var = ctk.StringVar(value="")
-        self.canal_var = ctk.StringVar(value=CANALES_APC[0])
+        self.nombre_apellido_var = ctk.StringVar(value="")
+        self.canal_var = ctk.StringVar(value="")
         self.motivo_var = ctk.StringVar(value="")
         self.importe_var = ctk.StringVar(value="")
         self.cuenta_var = ctk.StringVar(value="")
+        self.tema_diario_var = ctk.StringVar(value="")
 
         ctk.CTkLabel(caso, text="Caso actual", font=ctk.CTkFont(size=16, weight="bold")).grid(
             row=0, column=0, columnspan=2, padx=14, pady=(14, 8), sticky="w"
         )
-        self._campo(caso, "Nro reclamo / operacion", self.incidente_var, 1)
-        ctk.CTkLabel(caso, text="Canal").grid(row=2, column=0, padx=14, pady=8, sticky="w")
-        ctk.CTkOptionMenu(caso, values=list(CANALES_APC), variable=self.canal_var).grid(
-            row=2, column=1, padx=14, pady=8, sticky="ew"
-        )
-        self._campo(caso, "Motivo", self.motivo_var, 3)
-        self._campo(caso, "Importe", self.importe_var, 4)
-        self._campo(caso, "Cuenta", self.cuenta_var, 5)
+        self._campo(caso, "Incidente", self.incidente_var, 1)
+        self._campo(caso, "Nombre y Apellido", self.nombre_apellido_var, 2)
+        self._campo(caso, "Canal / Tema", self.canal_var, 3)
+        self._campo(caso, "Motivo / Detalle", self.motivo_var, 4)
+        self._campo(caso, "Importe", self.importe_var, 5)
+        self._campo(caso, "Cuenta", self.cuenta_var, 6)
         ctk.CTkButton(caso, text="Siguiente reclamo", command=self._siguiente_reclamo).grid(
-            row=6, column=1, padx=14, pady=(10, 14), sticky="e"
+            row=7, column=1, padx=14, pady=(10, 14), sticky="e"
         )
 
         salida = ctk.CTkFrame(body, fg_color="#172033")
         salida.grid(row=0, column=1, padx=(6, 12), pady=12, sticky="nsew")
         salida.grid_columnconfigure(0, weight=1)
-        salida.grid_rowconfigure(1, weight=1)
+        salida.grid_rowconfigure(4, weight=1)
         ctk.CTkLabel(
             salida,
-            text="Resultado y texto Diario",
+            text="Resolucion actual",
             font=ctk.CTkFont(size=16, weight="bold"),
         ).grid(row=0, column=0, padx=14, pady=(14, 8), sticky="w")
+        ctk.CTkLabel(salida, text="Tema").grid(row=1, column=0, padx=14, pady=(4, 4), sticky="w")
+        ctk.CTkEntry(salida, textvariable=self.tema_diario_var).grid(
+            row=2, column=0, padx=14, pady=(0, 10), sticky="ew"
+        )
+        ctk.CTkLabel(salida, text="Detalle / Nota").grid(
+            row=3, column=0, padx=14, pady=(0, 4), sticky="nw"
+        )
         self.resultado_text = ctk.CTkTextbox(salida, height=300)
-        self.resultado_text.grid(row=1, column=0, padx=14, pady=(0, 14), sticky="nsew")
+        self.resultado_text.grid(row=4, column=0, padx=14, pady=(0, 14), sticky="nsew")
         self.resultado_text.insert(
             "1.0",
             "Esperando accion.\n\n"
             "1. Cargue la Base de Reclamos.\n"
             "2. Pegue el Nro en APC.\n"
             "3. Busque el incidente en APC.\n"
-            "4. Use Leer y Analizar para generar una sugerencia local.",
+            "4. Use Leer y Analizar para completar Tema y Detalle Diario.",
         )
 
         footer = ctk.CTkFrame(self, fg_color="#111827")
@@ -168,10 +175,7 @@ class APCDesktopApp(ctk.CTk):
         try:
             path = Path(archivo)
             dataframe = pd.read_csv(path) if path.suffix.lower() == ".csv" else pd.read_excel(path)
-            self.registros = [
-                self.motor.normalizar_registro_publico(fila)
-                for fila in dataframe.to_dict("records")
-            ]
+            self.registros = self.motor.normalizar_base_reclamos(dataframe)
             self.indice_actual = 0
             self._mostrar_registro_actual()
             self._actualizar_estado(f"Base cargada: {len(self.registros)} reclamos. Archivo local.")
@@ -185,10 +189,13 @@ class APCDesktopApp(ctk.CTk):
             return
         self.caso_actual = self.registros[self.indice_actual]
         self.incidente_var.set(str(self.caso_actual.get("numero_incidente", "")))
+        self.nombre_apellido_var.set(str(self.caso_actual.get("nombre_apellido", "")))
         self.canal_var.set(str(self.caso_actual.get("canal", "Otros")))
         self.motivo_var.set(str(self.caso_actual.get("motivo", "")))
         self.importe_var.set(str(self.caso_actual.get("importe", "")))
         self.cuenta_var.set(str(self.caso_actual.get("numero_cuenta", "")))
+        self.tema_diario_var.set("")
+        self._set_text("Resolucion pendiente. Use Leer y Analizar cuando el incidente este abierto en APC.")
 
     def _siguiente_reclamo(self) -> None:
         """Avanza al siguiente reclamo de la base cargada."""
@@ -240,17 +247,8 @@ class APCDesktopApp(ctk.CTk):
             caso["motivo"] = "Informacion complementada desde documentos locales"
 
         self.ultimo_analisis = self.motor.analizar_caso(caso)
-        salida = (
-            f"Incidente: {self.ultimo_analisis['numero_incidente']}\n"
-            f"Canal: {self.ultimo_analisis['canal']}\n"
-            f"Fuente: {self.ultimo_analisis['fuente_sugerencia']}\n"
-            f"Requiere aprobacion humana: "
-            f"{self.ultimo_analisis['requiere_aprobacion_humana']}\n\n"
-            f"Resolucion sugerida:\n{self.ultimo_analisis['resolucion_sugerida']}\n\n"
-            f"Texto Diario:\n{self.ultimo_analisis['texto_diario']}\n\n"
-            f"Documentos leidos: {len(textos)}"
-        )
-        self._set_text(salida)
+        self.tema_diario_var.set(str(self.ultimo_analisis.get("tema_diario", "")))
+        self._set_text(str(self.ultimo_analisis.get("detalle_diario", "")))
         self._actualizar_estado("Analisis generado localmente. Revise antes de usar en APC.")
 
     def _preparar_documentacion(self) -> None:
@@ -273,16 +271,19 @@ class APCDesktopApp(ctk.CTk):
         if not self.ultimo_analisis:
             messagebox.showwarning("Sin analisis", "Primero ejecute Leer y Analizar.")
             return
-        texto = str(self.ultimo_analisis.get("texto_diario", ""))
+        tema = self.tema_diario_var.get().strip()
+        detalle = self.resultado_text.get("1.0", "end").strip()
+        texto = f"Tema: {tema}\nDetalle: {detalle}" if tema else detalle
         self.clipboard_clear()
         self.clipboard_append(texto)
         self.update()
-        self._actualizar_estado("Texto Diario copiado. Pegarlo manualmente en APC luego de revisarlo.")
+        self._actualizar_estado("Tema y Detalle Diario copiados. Pegarlos manualmente en APC luego de revisar.")
 
     def _caso_desde_campos(self) -> dict[str, Any]:
         """Construye un caso desde los campos visibles."""
         return {
             "numero_incidente": self.incidente_var.get().strip(),
+            "nombre_apellido": self.nombre_apellido_var.get().strip(),
             "canal": self.canal_var.get().strip(),
             "motivo": self.motivo_var.get().strip(),
             "importe": self.importe_var.get().strip(),

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import logging
+import re
+import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -51,7 +53,7 @@ class MotorAPC:
         else:
             dataframe = pd.read_excel(archivo)
 
-        filas = [self._normalizar_registro(fila) for fila in dataframe.to_dict("records")]
+        filas = self.normalizar_base_reclamos(dataframe)
         cantidad = self.repositorio.guardar_base_reclamos(filas, archivo.name)
         self.logger.info("Base cargada desde %s", archivo)
         return cantidad
@@ -140,16 +142,22 @@ class MotorAPC:
         if resolucion:
             resolucion_sugerida = resolucion["texto_resolucion"]
             texto_diario = resolucion["texto_diario"]
+            tema_diario = str(resolucion.get("motivo", "") or caso_normalizado.get("canal", ""))
+            detalle_diario = str(resolucion.get("texto_resolucion", "") or "")
             fuente = f"resolucion_entrenada:{resolucion['id']}"
         else:
             resolucion_sugerida = self.generar_resolucion_sugerida(caso_normalizado)
             texto_diario = self.generar_texto_diario(caso_normalizado, resolucion_sugerida)
+            tema_diario = str(caso_normalizado.get("canal", "Otros"))
+            detalle_diario = resolucion_sugerida
             fuente = "regla_base_mvp"
 
         resultado = {
             **caso_normalizado,
             "resolucion_sugerida": resolucion_sugerida,
             "texto_diario": texto_diario,
+            "tema_diario": tema_diario,
+            "detalle_diario": detalle_diario,
             "fuente_sugerencia": fuente,
             "requiere_aprobacion_humana": True,
             "aprobado": False,
@@ -187,6 +195,7 @@ class MotorAPC:
         importe = float(caso.get("importe") or 0)
         return (
             f"Analisis APC - Incidente {caso.get('numero_incidente', '')}. "
+            f"Afectado: {caso.get('nombre_apellido', '')}. "
             f"Canal: {caso.get('canal', '')}. "
             f"Cuenta: {caso.get('numero_cuenta', '')}. "
             f"Importe reclamado: {importe:.2f}. "
@@ -291,6 +300,43 @@ class MotorAPC:
         """
         return self._normalizar_registro(fila)
 
+    def normalizar_base_reclamos(self, dataframe: pd.DataFrame) -> list[dict[str, Any]]:
+        """Normaliza una base y consolida transacciones marcadas por incidente.
+
+        Args:
+            dataframe: Base CSV/Excel cargada localmente.
+
+        Returns:
+            Lista de casos normalizados para mostrar o persistir.
+        """
+        filas_originales = dataframe.to_dict("records")
+        if not filas_originales:
+            return []
+
+        grupos: dict[str, list[dict[str, Any]]] = {}
+        sin_incidente: list[dict[str, Any]] = []
+
+        for fila in filas_originales:
+            normalizada = self._normalizar_registro(fila)
+            incidente = normalizada.get("numero_incidente", "")
+            if incidente:
+                grupos.setdefault(str(incidente), []).append(fila)
+            else:
+                sin_incidente.append(fila)
+
+        registros: list[dict[str, Any]] = []
+        for incidente, filas_grupo in grupos.items():
+            registro = self._normalizar_registro(filas_grupo[0])
+            registro["numero_incidente"] = incidente
+            registro["importe"] = self._calcular_importe_transacciones(filas_grupo)
+            cuenta = self._buscar_primera_cuenta(filas_grupo)
+            if cuenta:
+                registro["numero_cuenta"] = cuenta
+            registros.append(registro)
+
+        registros.extend(self._normalizar_registro(fila) for fila in sin_incidente)
+        return registros
+
     def _buscar_mejor_resolucion(self, caso: dict[str, Any]) -> dict[str, Any] | None:
         """Busca una resolucion entrenada compatible con el caso.
 
@@ -321,31 +367,181 @@ class MotorAPC:
         Returns:
             Registro normalizado para el motor.
         """
-        normalizado = {str(clave).lower().strip(): valor for clave, valor in fila.items()}
+        normalizado = {self._normalizar_clave(clave): valor for clave, valor in fila.items()}
+        importe = self._obtener_valor(
+            normalizado,
+            [
+                "importe $",
+                "importe",
+                "monto",
+                "monto reclamado",
+                "importe reclamado",
+            ],
+        )
+        cuenta = self._obtener_valor(
+            normalizado,
+            [
+                "cuenta desde",
+                "cta dde",
+                "cta desde",
+                "numero_cuenta",
+                "nro_cuenta",
+                "cuenta",
+            ],
+        )
         return {
             "numero_incidente": str(
-                normalizado.get("numero_incidente")
-                or normalizado.get("incidente")
-                or normalizado.get("nro_incidente")
-                or normalizado.get("nro de operacion")
-                or normalizado.get("nro de operación")
-                or normalizado.get("nro_operacion")
-                or normalizado.get("numero_operacion")
-                or normalizado.get("numero de operacion")
+                self._obtener_valor(
+                    normalizado,
+                    [
+                        "numero_incidente",
+                        "incidente",
+                        "nro_incidente",
+                        "nro de operacion",
+                        "nro_operacion",
+                        "numero_operacion",
+                        "numero de operacion",
+                        "nro reclamo",
+                        "reclamo",
+                    ],
+                )
                 or ""
-            ),
-            "canal": str(normalizado.get("canal") or "Otros"),
-            "motivo": str(normalizado.get("motivo") or normalizado.get("descripcion") or ""),
-            "fecha": str(normalizado.get("fecha") or ""),
-            "hora": str(normalizado.get("hora") or ""),
-            "importe": parsear_importe(normalizado.get("importe") or normalizado.get("monto")),
-            "numero_cuenta": str(
-                normalizado.get("numero_cuenta")
-                or normalizado.get("cuenta")
-                or normalizado.get("nro_cuenta")
+            ).strip(),
+            "nombre_apellido": str(
+                self._obtener_valor(
+                    normalizado,
+                    ["nombre y apellido", "nombre_apellido", "cliente", "pagador", "afectado"],
+                )
                 or ""
-            ),
+            ).strip(),
+            "canal": str(self._obtener_valor(normalizado, ["canal", "tema"]) or "Otros").strip(),
+            "motivo": str(
+                self._obtener_valor(
+                    normalizado,
+                    ["motivo", "detalle", "descripcion", "descripcion reclamo"],
+                )
+                or ""
+            ).strip(),
+            "fecha": str(
+                self._obtener_valor(normalizado, ["fecha", "fecha trx", "fecha operacion"]) or ""
+            ).strip(),
+            "hora": str(
+                self._obtener_valor(normalizado, ["hora", "hora trx", "hora operacion"]) or ""
+            ).strip(),
+            "importe": parsear_importe(importe),
+            "numero_cuenta": self._normalizar_cuenta(cuenta),
         }
+
+    def _calcular_importe_transacciones(self, filas: list[dict[str, Any]]) -> float:
+        """Suma importes marcados; si no hay marca, usa el primer importe disponible.
+
+        Args:
+            filas: Filas originales de una misma base o incidente.
+
+        Returns:
+            Importe consolidado.
+        """
+        filas_marcadas = [fila for fila in filas if self._es_transaccion_marcada(fila)]
+        filas_a_sumar = filas_marcadas or filas[:1]
+        total = 0.0
+
+        for fila in filas_a_sumar:
+            normalizada = {self._normalizar_clave(clave): valor for clave, valor in fila.items()}
+            total += parsear_importe(
+                self._obtener_valor(
+                    normalizada,
+                    ["importe $", "importe", "monto", "monto reclamado", "importe reclamado"],
+                )
+            )
+        return total
+
+    def _buscar_primera_cuenta(self, filas: list[dict[str, Any]]) -> str:
+        """Obtiene la primera cuenta valida dentro de un grupo de filas.
+
+        Args:
+            filas: Filas originales.
+
+        Returns:
+            Cuenta normalizada a 14 digitos o cadena vacia.
+        """
+        for fila in filas:
+            normalizada = {self._normalizar_clave(clave): valor for clave, valor in fila.items()}
+            cuenta = self._normalizar_cuenta(
+                self._obtener_valor(
+                    normalizada,
+                    ["cuenta desde", "cta dde", "cta desde", "numero_cuenta", "nro_cuenta"],
+                )
+            )
+            if cuenta:
+                return cuenta
+        return ""
+
+    def _es_transaccion_marcada(self, fila: dict[str, Any]) -> bool:
+        """Detecta filas seleccionadas o resaltadas en bases exportadas.
+
+        Args:
+            fila: Fila original de Excel/CSV.
+
+        Returns:
+            `True` si la fila tiene una marca reconocible.
+        """
+        normalizada = {self._normalizar_clave(clave): valor for clave, valor in fila.items()}
+        valor = self._obtener_valor(
+            normalizada,
+            ["check", "seleccionado", "seleccionada", "resaltado", "resaltada", "marcado"],
+        )
+        if isinstance(valor, bool):
+            return valor
+        if valor is None:
+            return False
+        texto = str(valor).strip().lower()
+        return texto in {"1", "x", "si", "sí", "true", "ok", "marcado", "resaltado"}
+
+    def _normalizar_cuenta(self, valor: Any) -> str:
+        """Convierte una cuenta a texto de 14 digitos cuando es posible.
+
+        Args:
+            valor: Cuenta original.
+
+        Returns:
+            Cuenta normalizada o cadena vacia.
+        """
+        if valor is None:
+            return ""
+        digitos = re.sub(r"\D", "", str(valor))
+        if not digitos:
+            return ""
+        return digitos[-14:].zfill(14)
+
+    def _normalizar_clave(self, clave: Any) -> str:
+        """Normaliza encabezados de CSV/Excel para matchear variantes.
+
+        Args:
+            clave: Encabezado original.
+
+        Returns:
+            Encabezado comparable.
+        """
+        texto = unicodedata.normalize("NFKD", str(clave))
+        texto = "".join(caracter for caracter in texto if not unicodedata.combining(caracter))
+        texto = re.sub(r"[^a-zA-Z0-9$]+", " ", texto).strip().lower()
+        return re.sub(r"\s+", " ", texto)
+
+    def _obtener_valor(self, normalizado: dict[str, Any], aliases: list[str]) -> Any:
+        """Busca el primer valor no vacio entre aliases de columna.
+
+        Args:
+            normalizado: Diccionario con claves ya normalizadas.
+            aliases: Nombres posibles de columna.
+
+        Returns:
+            Primer valor encontrado o `None`.
+        """
+        for alias in aliases:
+            valor = normalizado.get(self._normalizar_clave(alias))
+            if valor is not None and str(valor).strip().lower() != "nan":
+                return valor
+        return None
 
     def _inferir_canal_desde_tema(self, tema: str) -> str:
         """Infiere canal APC a partir del tema de una resolucion.
