@@ -79,3 +79,9 @@
 - El importe visible incorpora simbolo de moneda (`$` o `US$`) segun el selector `Moneda`.
 - Los botones `Editar` y `Deshacer` se ubican en la esquina superior derecha de `Resolucion actual`.
 - La edicion y el deshacer se aplican de forma conjunta a `Tema` y `Detalle`.
+
+## Iteracion 9 - Caso actual bloqueado
+
+- Todos los campos del panel `Caso actual` quedan bloqueados para edicion manual.
+- `Caso actual` se trata como informacion fuente proveniente del incidente APC o de la base cargada.
+- La edicion humana queda concentrada en `Resolucion actual`, antes de copiar el texto a APC.

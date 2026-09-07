@@ -46,7 +46,7 @@ class APCDesktopApp(ctk.CTk):
         self.minsize(920, 620)
 
         self._crear_layout()
-        self._actualizar_estado("Cargue una base o ingrese un caso manual.")
+        self._actualizar_estado("Cargue una base o lea el incidente APC para completar el caso actual.")
 
     def _crear_layout(self) -> None:
         """Construye una unica vista con botones operativos."""
@@ -107,12 +107,12 @@ class APCDesktopApp(ctk.CTk):
         ctk.CTkLabel(caso, text="Caso actual", font=ctk.CTkFont(size=16, weight="bold")).grid(
             row=0, column=0, columnspan=2, padx=14, pady=(14, 8), sticky="w"
         )
-        self._campo(caso, "Incidente", self.incidente_var, 1)
-        self._campo(caso, "Cliente", self.cliente_var, 2)
-        self._campo(caso, "Canal", self.canal_var, 3)
-        self._campo(caso, "Motivo", self.motivo_var, 4)
+        self._campo(caso, "Incidente", self.incidente_var, 1, state="disabled")
+        self._campo(caso, "Cliente", self.cliente_var, 2, state="disabled")
+        self._campo(caso, "Canal", self.canal_var, 3, state="disabled")
+        self._campo(caso, "Motivo", self.motivo_var, 4, state="disabled")
         self._campo_importe_moneda(caso, 5)
-        self._campo(caso, "Cuenta", self.cuenta_var, 6)
+        self._campo(caso, "Cuenta", self.cuenta_var, 6, state="disabled")
         ctk.CTkButton(caso, text="Siguiente reclamo", command=self._siguiente_reclamo).grid(
             row=7, column=1, padx=14, pady=(10, 14), sticky="e"
         )
@@ -183,10 +183,11 @@ class APCDesktopApp(ctk.CTk):
         label: str,
         variable: ctk.StringVar,
         row: int,
+        state: str = "normal",
     ) -> None:
         """Crea una etiqueta y entrada."""
         ctk.CTkLabel(parent, text=label).grid(row=row, column=0, padx=14, pady=8, sticky="w")
-        ctk.CTkEntry(parent, textvariable=variable).grid(
+        ctk.CTkEntry(parent, textvariable=variable, state=state).grid(
             row=row, column=1, padx=14, pady=8, sticky="ew"
         )
 
@@ -199,7 +200,7 @@ class APCDesktopApp(ctk.CTk):
         contenedor.grid_columnconfigure(1, weight=0)
         ctk.CTkLabel(contenedor, text="").grid(row=0, column=0, sticky="w")
         ctk.CTkLabel(contenedor, text="Moneda").grid(row=0, column=1, sticky="w")
-        ctk.CTkEntry(contenedor, textvariable=self.importe_var).grid(
+        ctk.CTkEntry(contenedor, textvariable=self.importe_var, state="disabled").grid(
             row=1, column=0, padx=(0, 8), sticky="ew"
         )
         ctk.CTkOptionMenu(
@@ -208,6 +209,7 @@ class APCDesktopApp(ctk.CTk):
             variable=self.moneda_var,
             width=120,
             command=self._cambiar_moneda,
+            state="disabled",
         ).grid(row=1, column=1, sticky="e")
 
     def _cargar_base(self) -> None:
@@ -262,7 +264,7 @@ class APCDesktopApp(ctk.CTk):
         """Copia el numero y lo pega en APC despues de una pausa breve."""
         numero = self.incidente_var.get().strip()
         if not numero:
-            messagebox.showwarning("Sin numero", "Ingrese o cargue un numero de reclamo.")
+            messagebox.showwarning("Sin numero", "Cargue una base o lea el incidente desde APC.")
             return
 
         self.clipboard_clear()

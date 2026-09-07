@@ -10,7 +10,7 @@ La primera version vuelve a una unica vista con el caso actual, un panel de reso
 
 ## Caso actual
 
-El panel izquierdo muestra el incidente APC sobre el que esta trabajando el analista:
+El panel izquierdo muestra el incidente APC sobre el que esta trabajando el analista. Todos sus campos quedan bloqueados porque son datos fuente tomados del incidente y no deben editarse manualmente desde la app:
 
 - `Incidente`: numero de operacion/incidente APC.
 - `Cliente`: persona afectada en el reclamo.

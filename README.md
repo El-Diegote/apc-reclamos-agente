@@ -6,7 +6,7 @@ Este proyecto no es un trabajo academico. Es una iniciativa operativa para desar
 
 ## Caso de uso
 
-El caso de uso principal es asistir a un equipo de operaciones, back office o auditoria bancaria en el analisis inicial de reclamos. A partir de una base de reclamos o de un caso ingresado manualmente, la aplicacion:
+El caso de uso principal es asistir a un equipo de operaciones, back office o auditoria bancaria en el analisis inicial de reclamos. A partir de una base de reclamos o de un incidente leido desde APC, la aplicacion:
 
 - Carga Base de Reclamos desde CSV o Excel.
 - Entrena resoluciones APC reutilizables.
