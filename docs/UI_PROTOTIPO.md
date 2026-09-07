@@ -17,7 +17,7 @@ El panel izquierdo muestra el incidente APC sobre el que esta trabajando el anal
 - `Canal`: valor que surge del campo `TEMA` del Excel `RESOLUCIONES APC` o del canal detectado en la base.
 - `Motivo`: detalle asociado al tema o motivo operativo del reclamo.
 - `Importe`: suma de transacciones marcadas en la base local, tomando la columna `Importe $` cuando existe.
-- `Moneda`: selector entre `Peso` y `Dolar`; cuando se elige `Dolar`, el importe se convierte con el `COEFICIENTE DOLAR` leido desde `RESOLUCIONES APC`.
+- `Moneda`: selector entre `Peso` y `Dolar`; el importe muestra el simbolo correspondiente y, cuando se elige `Dolar`, se convierte con el `COEFICIENTE DOLAR` leido desde `RESOLUCIONES APC`.
 - `Cuenta`: cuenta desde normalizada a 14 digitos.
 
 ## Resolucion actual
@@ -26,8 +26,8 @@ El panel derecho muestra lo que se va a completar en la solapa `Diario` de APC:
 
 - `Tema`: se completa con el `TEMA` entrenado desde `RESOLUCIONES APC`.
 - `Detalle`: se completa con la `NOTA` equivalente a la fila elegida del Excel de resoluciones.
-- `Editar`: habilita cambios manuales sobre el detalle sugerido.
-- `Deshacer`: revierte el ultimo cambio realizado sobre el detalle.
+- `Editar`: habilita cambios manuales sobre `Tema` y `Detalle`.
+- `Deshacer`: revierte el ultimo cambio realizado sobre `Tema` o `Detalle`.
 
 ## Botones funcionales
 

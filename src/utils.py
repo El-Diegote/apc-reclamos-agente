@@ -117,7 +117,16 @@ def parsear_importe(valor: str | float | int | None) -> float:
     if isinstance(valor, (float, int)):
         return float(valor)
 
-    limpio = valor.strip().replace("$", "").replace("ARS", "").replace(" ", "")
+    limpio = (
+        valor.strip()
+        .upper()
+        .replace("US$", "")
+        .replace("U$S", "")
+        .replace("USD", "")
+        .replace("$", "")
+        .replace("ARS", "")
+        .replace(" ", "")
+    )
     # Si aparece coma decimal, se retiran puntos de miles y se convierte coma a punto.
     if "," in limpio and "." in limpio:
         limpio = limpio.replace(".", "").replace(",", ".")

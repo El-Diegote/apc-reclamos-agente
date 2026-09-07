@@ -73,3 +73,9 @@
 - Se agrega selector `Moneda` junto a `Importe`, con conversion de `Dolar` mediante `COEFICIENTE DOLAR` del Excel `RESOLUCIONES APC`.
 - El campo `Detalle` queda bloqueado por defecto y se habilita con `Editar`.
 - Se agrega `Deshacer` para revertir cambios manuales sobre el detalle antes de copiarlo a APC.
+
+## Iteracion 8 - Edicion conjunta de resolucion
+
+- El importe visible incorpora simbolo de moneda (`$` o `US$`) segun el selector `Moneda`.
+- Los botones `Editar` y `Deshacer` se ubican en la esquina superior derecha de `Resolucion actual`.
+- La edicion y el deshacer se aplican de forma conjunta a `Tema` y `Detalle`.

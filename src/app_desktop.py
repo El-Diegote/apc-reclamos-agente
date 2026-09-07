@@ -36,8 +36,8 @@ class APCDesktopApp(ctk.CTk):
         self.documentos_dir = CORRIDAS_DIR / DEFAULT_CORRIDA / "documentos"
         self.importe_base = 0.0
         self.moneda_previa = "Peso"
-        self.detalle_editable = False
-        self.detalle_historial: list[str] = []
+        self.resolucion_editable = False
+        self.resolucion_historial: list[tuple[str, str]] = []
 
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
@@ -121,36 +121,38 @@ class APCDesktopApp(ctk.CTk):
         salida.grid(row=0, column=1, padx=(6, 12), pady=12, sticky="nsew")
         salida.grid_columnconfigure(0, weight=1)
         salida.grid_rowconfigure(4, weight=1)
+        resolucion_header = ctk.CTkFrame(salida, fg_color="transparent")
+        resolucion_header.grid(row=0, column=0, padx=14, pady=(14, 8), sticky="ew")
+        resolucion_header.grid_columnconfigure(0, weight=1)
         ctk.CTkLabel(
-            salida,
+            resolucion_header,
             text="Resolucion actual",
             font=ctk.CTkFont(size=16, weight="bold"),
-        ).grid(row=0, column=0, padx=14, pady=(14, 8), sticky="w")
-        ctk.CTkLabel(salida, text="Tema").grid(row=1, column=0, padx=14, pady=(4, 4), sticky="w")
-        ctk.CTkEntry(salida, textvariable=self.tema_diario_var).grid(
-            row=2, column=0, padx=14, pady=(0, 10), sticky="ew"
-        )
-        detalle_header = ctk.CTkFrame(salida, fg_color="transparent")
-        detalle_header.grid(row=3, column=0, padx=14, pady=(0, 4), sticky="ew")
-        detalle_header.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(detalle_header, text="Detalle").grid(row=0, column=0, sticky="w")
+        ).grid(row=0, column=0, sticky="w")
         ctk.CTkButton(
-            detalle_header,
+            resolucion_header,
             text="Editar",
             width=80,
             height=30,
-            command=self._habilitar_edicion_detalle,
+            command=self._habilitar_edicion_resolucion,
         ).grid(row=0, column=1, padx=(8, 0), sticky="e")
         ctk.CTkButton(
-            detalle_header,
+            resolucion_header,
             text="Deshacer",
             width=90,
             height=30,
-            command=self._deshacer_detalle,
+            command=self._deshacer_resolucion,
         ).grid(row=0, column=2, padx=(8, 0), sticky="e")
+        ctk.CTkLabel(salida, text="Tema").grid(row=1, column=0, padx=14, pady=(4, 4), sticky="w")
+        self.tema_diario_entry = ctk.CTkEntry(salida, textvariable=self.tema_diario_var)
+        self.tema_diario_entry.grid(
+            row=2, column=0, padx=14, pady=(0, 10), sticky="ew"
+        )
+        self.tema_diario_entry.bind("<KeyRelease>", self._registrar_cambio_resolucion)
+        ctk.CTkLabel(salida, text="Detalle").grid(row=3, column=0, padx=14, pady=(0, 4), sticky="w")
         self.resultado_text = ctk.CTkTextbox(salida, height=300)
         self.resultado_text.grid(row=4, column=0, padx=14, pady=(0, 14), sticky="nsew")
-        self.resultado_text.bind("<KeyRelease>", self._registrar_cambio_detalle)
+        self.resultado_text.bind("<KeyRelease>", self._registrar_cambio_resolucion)
         self.resultado_text.insert(
             "1.0",
             "Esperando accion.\n\n"
@@ -159,8 +161,9 @@ class APCDesktopApp(ctk.CTk):
             "3. Busque el incidente en APC.\n"
             "4. Use Leer y Analizar para completar Tema y Detalle.",
         )
+        self.tema_diario_entry.configure(state="disabled")
         self.resultado_text.configure(state="disabled")
-        self.detalle_historial = [self.resultado_text.get("1.0", "end").strip()]
+        self.resolucion_historial = [self._snapshot_resolucion()]
 
         footer = ctk.CTkFrame(self, fg_color="#111827")
         footer.grid(row=3, column=0, padx=16, pady=(0, 16), sticky="ew")
@@ -368,40 +371,47 @@ class APCDesktopApp(ctk.CTk):
         self.resultado_text.configure(state="normal")
         self.resultado_text.delete("1.0", "end")
         self.resultado_text.insert("1.0", texto)
-        self.detalle_editable = False
+        self.resolucion_editable = False
+        self.tema_diario_entry.configure(state="disabled")
         self.resultado_text.configure(state="disabled")
-        self.detalle_historial = [texto.strip()]
+        self.resolucion_historial = [self._snapshot_resolucion()]
 
-    def _habilitar_edicion_detalle(self) -> None:
-        """Permite editar manualmente el detalle sugerido."""
-        self.detalle_editable = True
+    def _habilitar_edicion_resolucion(self) -> None:
+        """Permite editar manualmente tema y detalle sugeridos."""
+        self.resolucion_editable = True
+        self.tema_diario_entry.configure(state="normal")
         self.resultado_text.configure(state="normal")
-        texto_actual = self.resultado_text.get("1.0", "end").strip()
-        if not self.detalle_historial or self.detalle_historial[-1] != texto_actual:
-            self.detalle_historial.append(texto_actual)
-        self._actualizar_estado("Detalle habilitado para edicion manual.")
+        snapshot_actual = self._snapshot_resolucion()
+        if not self.resolucion_historial or self.resolucion_historial[-1] != snapshot_actual:
+            self.resolucion_historial.append(snapshot_actual)
+        self._actualizar_estado("Tema y Detalle habilitados para edicion manual.")
 
-    def _registrar_cambio_detalle(self, _event: Any = None) -> None:
-        """Guarda cambios del detalle para poder deshacer."""
-        if not self.detalle_editable:
+    def _registrar_cambio_resolucion(self, _event: Any = None) -> None:
+        """Guarda cambios de tema y detalle para poder deshacer."""
+        if not self.resolucion_editable:
             return
-        texto_actual = self.resultado_text.get("1.0", "end").strip()
-        if not self.detalle_historial or self.detalle_historial[-1] != texto_actual:
-            self.detalle_historial.append(texto_actual)
+        snapshot_actual = self._snapshot_resolucion()
+        if not self.resolucion_historial or self.resolucion_historial[-1] != snapshot_actual:
+            self.resolucion_historial.append(snapshot_actual)
 
-    def _deshacer_detalle(self) -> None:
-        """Revierte el ultimo cambio manual del detalle."""
-        if len(self.detalle_historial) <= 1:
-            self._actualizar_estado("No hay cambios de Detalle para deshacer.")
+    def _deshacer_resolucion(self) -> None:
+        """Revierte el ultimo cambio manual de tema o detalle."""
+        if len(self.resolucion_historial) <= 1:
+            self._actualizar_estado("No hay cambios de Tema o Detalle para deshacer.")
             return
-        self.detalle_historial.pop()
-        texto_anterior = self.detalle_historial[-1]
+        self.resolucion_historial.pop()
+        tema_anterior, detalle_anterior = self.resolucion_historial[-1]
+        estado_tema = self.tema_diario_entry.cget("state")
+        if estado_tema == "disabled":
+            self.tema_diario_entry.configure(state="normal")
+        self.tema_diario_var.set(tema_anterior)
         self.resultado_text.configure(state="normal")
         self.resultado_text.delete("1.0", "end")
-        self.resultado_text.insert("1.0", texto_anterior)
-        if not self.detalle_editable:
+        self.resultado_text.insert("1.0", detalle_anterior)
+        if not self.resolucion_editable:
+            self.tema_diario_entry.configure(state="disabled")
             self.resultado_text.configure(state="disabled")
-        self._actualizar_estado("Ultimo cambio del Detalle deshecho.")
+        self._actualizar_estado("Ultimo cambio de Tema o Detalle deshecho.")
 
     def _cambiar_moneda(self, moneda: str) -> None:
         """Aplica conversion al cambiar la moneda visible."""
@@ -416,12 +426,24 @@ class APCDesktopApp(ctk.CTk):
         moneda = self.moneda_var.get()
         if moneda == "Dolar":
             convertido = self.motor.convertir_dolar_a_peso(self.importe_base)
-            self.importe_var.set(f"{convertido:.2f}")
+            self.importe_var.set(self._formatear_importe(convertido, moneda))
             self._actualizar_estado(
                 f"Importe convertido desde Dolar con coeficiente {self.motor.coeficiente_dolar:.4f}."
             )
             return
-        self.importe_var.set(f"{self.importe_base:.2f}" if self.importe_base else "")
+        self.importe_var.set(self._formatear_importe(self.importe_base, moneda) if self.importe_base else "")
+
+    def _formatear_importe(self, importe: float, moneda: str) -> str:
+        """Formatea un importe visible con simbolo de moneda."""
+        simbolo = "US$" if moneda == "Dolar" else "$"
+        return f"{simbolo} {importe:.2f}"
+
+    def _snapshot_resolucion(self) -> tuple[str, str]:
+        """Devuelve tema y detalle actuales para historial."""
+        return (
+            self.tema_diario_var.get().strip(),
+            self.resultado_text.get("1.0", "end").strip(),
+        )
 
 
 def ejecutar_app() -> None:
