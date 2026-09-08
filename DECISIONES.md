@@ -92,3 +92,10 @@
 - Cada boton incorpora un indicador visual de validacion al costado.
 - El check confirma que la accion se completo o quedo preparada dentro del alcance actual.
 - Las acciones que requieren clicks exactos en APC quedan condicionadas al mapeo de pantallas y campos.
+
+## Iteracion 11 - Barra lateral y limpieza
+
+- Los botones operativos pasan a una barra lateral izquierda, apilados verticalmente.
+- El flujo visual queda ordenado como `Acciones`, `Caso actual` y `Resolucion actual`.
+- Se agrega `Limpiar` con confirmacion `Borrar`/`Cancelar`.
+- `Limpiar` resetea el incidente actual, paneles visibles, checks y portapapeles sin borrar archivos descargados.

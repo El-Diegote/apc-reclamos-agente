@@ -43,8 +43,8 @@ class APCDesktopApp(ctk.CTk):
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
         self.title("APC Reclamos Agente")
-        self.geometry("1020x680")
-        self.minsize(920, 620)
+        self.geometry("1180x700")
+        self.minsize(1040, 620)
 
         self._crear_layout()
         self._actualizar_estado("Cargue una base o lea el incidente APC para completar el caso actual.")
@@ -52,7 +52,7 @@ class APCDesktopApp(ctk.CTk):
     def _crear_layout(self) -> None:
         """Construye una unica vista con botones operativos."""
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(2, weight=1)
+        self.grid_rowconfigure(1, weight=1)
 
         header = ctk.CTkFrame(self, corner_radius=0, fg_color="#111827")
         header.grid(row=0, column=0, sticky="ew")
@@ -70,28 +70,46 @@ class APCDesktopApp(ctk.CTk):
             font=ctk.CTkFont(size=13),
         ).grid(row=1, column=0, padx=20, pady=(0, 16), sticky="w")
 
-        actions = ctk.CTkFrame(self, fg_color="#172033")
-        actions.grid(row=1, column=0, padx=16, pady=16, sticky="ew")
-        actions.grid_columnconfigure((0, 1, 2, 3, 4), weight=1)
+        main = ctk.CTkFrame(self, fg_color="#0F172A")
+        main.grid(row=1, column=0, padx=16, pady=16, sticky="nsew")
+        main.grid_columnconfigure(0, weight=0)
+        main.grid_columnconfigure(1, weight=1)
+        main.grid_columnconfigure(2, weight=1)
+        main.grid_rowconfigure(0, weight=1)
+
+        actions = ctk.CTkFrame(main, fg_color="#172033", width=250)
+        actions.grid(row=0, column=0, padx=(12, 8), pady=12, sticky="ns")
+        actions.grid_columnconfigure(0, weight=1)
+        actions.grid_propagate(False)
+
+        ctk.CTkLabel(
+            actions,
+            text="Acciones",
+            font=ctk.CTkFont(size=16, weight="bold"),
+        ).grid(row=0, column=0, padx=14, pady=(14, 10), sticky="w")
 
         botones = [
             ("Cargar Base", self._cargar_base),
             ("Pegar Nro en APC", self._copiar_y_pegar_en_apc),
             ("Leer y Analizar", self._leer_y_analizar),
-            ("Documentacion", self._validar_documentacion),
+            ("Documentación", self._validar_documentacion),
             ("Informar Resolución", self._informar_resolucion),
         ]
-        for columna, (texto, comando) in enumerate(botones):
-            self._boton_con_check(actions, texto, comando, columna)
+        for fila, (texto, comando) in enumerate(botones, start=1):
+            self._boton_con_check(actions, texto, comando, fila)
 
-        body = ctk.CTkFrame(self, fg_color="#0F172A")
-        body.grid(row=2, column=0, padx=16, pady=(0, 16), sticky="nsew")
-        body.grid_columnconfigure(0, weight=1)
-        body.grid_columnconfigure(1, weight=1)
-        body.grid_rowconfigure(0, weight=1)
+        self._boton_con_check(
+            actions,
+            "Limpiar",
+            self._confirmar_limpiar_incidente,
+            6,
+            fg_color="#7F1D1D",
+            hover_color="#991B1B",
+            pady=(18, 14),
+        )
 
-        caso = ctk.CTkFrame(body, fg_color="#172033")
-        caso.grid(row=0, column=0, padx=(12, 6), pady=12, sticky="nsew")
+        caso = ctk.CTkFrame(main, fg_color="#172033")
+        caso.grid(row=0, column=1, padx=(8, 6), pady=12, sticky="nsew")
         caso.grid_columnconfigure(1, weight=1)
 
         self.incidente_var = ctk.StringVar(value="")
@@ -116,8 +134,8 @@ class APCDesktopApp(ctk.CTk):
             row=7, column=1, padx=14, pady=(10, 14), sticky="e"
         )
 
-        salida = ctk.CTkFrame(body, fg_color="#172033")
-        salida.grid(row=0, column=1, padx=(6, 12), pady=12, sticky="nsew")
+        salida = ctk.CTkFrame(main, fg_color="#172033")
+        salida.grid(row=0, column=2, padx=(6, 12), pady=12, sticky="nsew")
         salida.grid_columnconfigure(0, weight=1)
         salida.grid_rowconfigure(4, weight=1)
         resolucion_header = ctk.CTkFrame(salida, fg_color="transparent")
@@ -165,7 +183,7 @@ class APCDesktopApp(ctk.CTk):
         self.resolucion_historial = [self._snapshot_resolucion()]
 
         footer = ctk.CTkFrame(self, fg_color="#111827")
-        footer.grid(row=3, column=0, padx=16, pady=(0, 16), sticky="ew")
+        footer.grid(row=2, column=0, padx=16, pady=(0, 16), sticky="ew")
         footer.grid_columnconfigure(0, weight=1)
         self.estado_label = ctk.CTkLabel(
             footer,
@@ -195,15 +213,29 @@ class APCDesktopApp(ctk.CTk):
         parent: ctk.CTkFrame,
         texto: str,
         comando: Any,
-        columna: int,
+        fila: int,
+        fg_color: str | None = None,
+        hover_color: str | None = None,
+        pady: int | tuple[int, int] = 6,
     ) -> None:
         """Crea un boton operativo con indicador de validacion."""
         key = texto.lower().replace(" ", "_")
         self.check_vars[key] = ctk.StringVar(value="○")
         contenedor = ctk.CTkFrame(parent, fg_color="transparent")
-        contenedor.grid(row=0, column=columna, padx=8, pady=12, sticky="ew")
+        contenedor.grid(row=fila, column=0, padx=14, pady=pady, sticky="ew")
         contenedor.grid_columnconfigure(0, weight=1)
-        ctk.CTkButton(contenedor, text=texto, height=48, command=comando).grid(
+        button_kwargs: dict[str, Any] = {}
+        if fg_color:
+            button_kwargs["fg_color"] = fg_color
+        if hover_color:
+            button_kwargs["hover_color"] = hover_color
+        ctk.CTkButton(
+            contenedor,
+            text=texto,
+            height=48,
+            command=comando,
+            **button_kwargs,
+        ).grid(
             row=0, column=0, sticky="ew"
         )
         ctk.CTkLabel(
@@ -365,15 +397,73 @@ class APCDesktopApp(ctk.CTk):
         archivos = [archivo for archivo in self.documentos_dir.iterdir() if archivo.is_file()]
         archivos_validos = [archivo for archivo in archivos if self._archivo_descargado_valido(archivo)]
         if not archivos_validos:
-            self._desmarcar_check("Documentacion")
+            self._desmarcar_check("Documentación")
             self._actualizar_estado("No se encontro documentacion descargada para validar.")
             messagebox.showwarning(
                 "Sin documentacion",
                 "No se encontraron archivos descargados o los archivos estan vacios.",
             )
             return
-        self._marcar_check("Documentacion")
+        self._marcar_check("Documentación")
         self._actualizar_estado(f"Documentacion validada: {len(archivos_validos)} archivos.")
+
+    def _confirmar_limpiar_incidente(self) -> None:
+        """Muestra confirmacion antes de limpiar el incidente actual."""
+        dialogo = ctk.CTkToplevel(self)
+        dialogo.title("Limpiar incidente")
+        dialogo.geometry("360x160")
+        dialogo.resizable(False, False)
+        dialogo.transient(self)
+        dialogo.grab_set()
+        dialogo.grid_columnconfigure(0, weight=1)
+
+        ctk.CTkLabel(
+            dialogo,
+            text="¿Desea borrar el incidente actual?",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            wraplength=310,
+        ).grid(row=0, column=0, padx=22, pady=(24, 18), sticky="ew")
+
+        botones = ctk.CTkFrame(dialogo, fg_color="transparent")
+        botones.grid(row=1, column=0, padx=22, pady=(0, 20), sticky="ew")
+        botones.grid_columnconfigure((0, 1), weight=1)
+        ctk.CTkButton(
+            botones,
+            text="Borrar",
+            fg_color="#7F1D1D",
+            hover_color="#991B1B",
+            command=lambda: self._limpiar_incidente_confirmado(dialogo),
+        ).grid(row=0, column=0, padx=(0, 8), sticky="ew")
+        ctk.CTkButton(
+            botones,
+            text="Cancelar",
+            fg_color="#475569",
+            hover_color="#334155",
+            command=dialogo.destroy,
+        ).grid(row=0, column=1, padx=(8, 0), sticky="ew")
+
+    def _limpiar_incidente_confirmado(self, dialogo: ctk.CTkToplevel) -> None:
+        """Limpia el incidente actual y cierra el dialogo de confirmacion."""
+        dialogo.destroy()
+        self.registros = []
+        self.indice_actual = 0
+        self.caso_actual = None
+        self.ultimo_analisis = None
+        self.importe_base = 0.0
+        self.moneda_previa = "Peso"
+        self.incidente_var.set("")
+        self.cliente_var.set("")
+        self.canal_var.set("")
+        self.motivo_var.set("")
+        self.importe_var.set("")
+        self.moneda_var.set("Peso")
+        self.cuenta_var.set("")
+        self.tema_diario_var.set("")
+        self._set_text("Esperando accion.\n\nCargue una Base de Reclamos para iniciar un nuevo incidente.")
+        self._reiniciar_checks()
+        self._marcar_check("Limpiar")
+        self.clipboard_clear()
+        self._actualizar_estado("Incidente actual borrado.")
 
     def _informar_resolucion(self) -> None:
         """Informa tema y detalle en APC mediante portapapeles y pegado asistido."""

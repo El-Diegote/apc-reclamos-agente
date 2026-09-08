@@ -6,7 +6,18 @@ Preparar una ventana simple para usar en paralelo con APC. El analista ingresa c
 
 ## Vistas incluidas
 
-La primera version vuelve a una unica vista con el caso actual, un panel de resolucion y cinco botones.
+La primera version usa una unica vista con barra lateral izquierda de acciones, el panel `Caso actual` y el panel `Resolucion actual`.
+
+## Barra lateral
+
+Los botones quedan apilados en la izquierda, uno debajo del otro, con su check de validacion al costado:
+
+- `Cargar Base`
+- `Pegar Nro en APC`
+- `Leer y Analizar`
+- `Documentación`
+- `Informar Resolución`
+- `Limpiar`
 
 ## Caso actual
 
@@ -34,8 +45,9 @@ El panel derecho muestra lo que se va a completar en la solapa `Diario` de APC:
 - `Cargar Base`: selecciona `Base de Reclamos`, toma el valor de la columna `Incidente`, completa `Caso actual` y copia ese numero al portapapeles.
 - `Pegar Nro en APC`: pega el incidente copiado en `Nro Operacion:`, presiona `Enter` para buscar y deja pendiente el click exacto sobre el resultado azul hasta contar con el mapeo de APC.
 - `Leer y Analizar`: lee la solapa `Detalle`, prepara descarga/lectura de `Documentacion` y genera una respuesta comparable con `RESOLUCIONES APC`.
-- `Documentacion`: valida que la documentacion descargada exista, no este vacia y sea legible.
+- `Documentación`: valida que la documentacion descargada exista, no este vacia y sea legible.
 - `Informar Resolución`: informa primero `Tema` y luego `Detalle` en la solapa `Diario`; el pegado exacto en APC requiere el mapeo de campos.
+- `Limpiar`: pide confirmacion con `Borrar` o `Cancelar`; si se confirma, borra el incidente actual, limpia `Caso actual`, limpia `Resolucion actual`, reinicia checks y limpia el portapapeles.
 
 Cada boton tiene un indicador de validacion al costado. El check aparece cuando la accion pudo completarse o quedar preparada correctamente dentro del alcance del prototipo.
 

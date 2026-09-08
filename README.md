@@ -28,7 +28,7 @@ Incluido:
 - Motor de sugerencias por resoluciones entrenadas y reglas base.
 - Modo CLI para corrida simulada.
 - Ventana simple para operar en paralelo con APC.
-- Botones funcionales iniciales: cargar base, pegar numero en APC, leer y analizar, validar documentacion e informar resolucion en Diario.
+- Barra lateral con botones funcionales: cargar base, pegar numero en APC, leer y analizar, validar documentacion, informar resolucion en Diario y limpiar el incidente actual.
 
 No incluido:
 
