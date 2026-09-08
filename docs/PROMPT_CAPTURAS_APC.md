@@ -218,16 +218,18 @@ Resultado esperado:
 - Fase actual: abre carpeta local y copia ruta.
 - Fase siguiente: descarga asistida/automatizada con Playwright cuando el mapeo este validado.
 
-### Boton Copiar Diario
+### Boton Informar Resolución
 
 Necesita:
 
-- Confirmar donde se pega el texto Diario en APC.
+- Confirmar donde se pega el campo `Tema` en la solapa `Diario`.
+- Confirmar donde se pega el campo `Detalle` de la nota en la solapa `Diario`.
 - Confirmar limite de caracteres y si se admite texto plano.
+- Confirmar si despues de pegar hay que guardar, aceptar o confirmar.
 
 Resultado esperado:
 
-- Copia el texto revisado para que el analista lo pegue manualmente.
+- Informa primero `Tema` y luego `Detalle` en APC, sin guardar credenciales y con validacion humana previa.
 
 ## Formato recomendado para enviar el relevamiento
 

@@ -31,11 +31,13 @@ El panel derecho muestra lo que se va a completar en la solapa `Diario` de APC:
 
 ## Botones funcionales
 
-- `Cargar Base`: selecciona una base CSV/XLSX local y toma el primer incidente.
-- `Pegar Nro en APC`: copia el incidente y, luego de 3 segundos, envia `Ctrl+V` al campo activo para pegar en `Nro de Operacion`.
-- `Leer y Analizar`: lee documentos locales ya descargados y completa `Tema` y `Detalle`.
-- `Documentacion`: abre la carpeta local de documentos y copia la ruta para descargar alli desde APC.
-- `Copiar Diario`: copia `Tema` y `Detalle` para pegarlos manualmente en APC luego de revisarlos.
+- `Cargar Base`: selecciona `Base de Reclamos`, toma el valor de la columna `Incidente`, completa `Caso actual` y copia ese numero al portapapeles.
+- `Pegar Nro en APC`: pega el incidente copiado en `Nro Operacion:`, presiona `Enter` para buscar y deja pendiente el click exacto sobre el resultado azul hasta contar con el mapeo de APC.
+- `Leer y Analizar`: lee la solapa `Detalle`, prepara descarga/lectura de `Documentacion` y genera una respuesta comparable con `RESOLUCIONES APC`.
+- `Documentacion`: valida que la documentacion descargada exista, no este vacia y sea legible.
+- `Informar Resolución`: informa primero `Tema` y luego `Detalle` en la solapa `Diario`; el pegado exacto en APC requiere el mapeo de campos.
+
+Cada boton tiene un indicador de validacion al costado. El check aparece cuando la accion pudo completarse o quedar preparada correctamente dentro del alcance del prototipo.
 
 ## Limite actual
 

@@ -38,6 +38,7 @@ class APCDesktopApp(ctk.CTk):
         self.moneda_previa = "Peso"
         self.resolucion_editable = False
         self.resolucion_historial: list[tuple[str, str]] = []
+        self.check_vars: dict[str, ctk.StringVar] = {}
 
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
@@ -77,13 +78,11 @@ class APCDesktopApp(ctk.CTk):
             ("Cargar Base", self._cargar_base),
             ("Pegar Nro en APC", self._copiar_y_pegar_en_apc),
             ("Leer y Analizar", self._leer_y_analizar),
-            ("Documentacion", self._preparar_documentacion),
-            ("Copiar Diario", self._copiar_diario),
+            ("Documentacion", self._validar_documentacion),
+            ("Informar Resolución", self._informar_resolucion),
         ]
         for columna, (texto, comando) in enumerate(botones):
-            ctk.CTkButton(actions, text=texto, height=48, command=comando).grid(
-                row=0, column=columna, padx=8, pady=12, sticky="ew"
-            )
+            self._boton_con_check(actions, texto, comando, columna)
 
         body = ctk.CTkFrame(self, fg_color="#0F172A")
         body.grid(row=2, column=0, padx=16, pady=(0, 16), sticky="nsew")
@@ -191,6 +190,30 @@ class APCDesktopApp(ctk.CTk):
             row=row, column=1, padx=14, pady=8, sticky="ew"
         )
 
+    def _boton_con_check(
+        self,
+        parent: ctk.CTkFrame,
+        texto: str,
+        comando: Any,
+        columna: int,
+    ) -> None:
+        """Crea un boton operativo con indicador de validacion."""
+        key = texto.lower().replace(" ", "_")
+        self.check_vars[key] = ctk.StringVar(value="○")
+        contenedor = ctk.CTkFrame(parent, fg_color="transparent")
+        contenedor.grid(row=0, column=columna, padx=8, pady=12, sticky="ew")
+        contenedor.grid_columnconfigure(0, weight=1)
+        ctk.CTkButton(contenedor, text=texto, height=48, command=comando).grid(
+            row=0, column=0, sticky="ew"
+        )
+        ctk.CTkLabel(
+            contenedor,
+            textvariable=self.check_vars[key],
+            width=28,
+            font=ctk.CTkFont(size=20, weight="bold"),
+            text_color="#A7F3D0",
+        ).grid(row=0, column=1, padx=(8, 0), sticky="e")
+
     def _campo_importe_moneda(self, parent: ctk.CTkFrame, row: int) -> None:
         """Crea el campo de importe con selector de moneda."""
         ctk.CTkLabel(parent, text="Importe").grid(row=row, column=0, padx=14, pady=8, sticky="w")
@@ -213,7 +236,7 @@ class APCDesktopApp(ctk.CTk):
         ).grid(row=1, column=1, sticky="e")
 
     def _cargar_base(self) -> None:
-        """Carga una base local y toma el primer reclamo."""
+        """Carga la base, toma el primer incidente y lo copia."""
         archivo = filedialog.askopenfilename(
             title="Seleccionar Base de Reclamos",
             filetypes=[("Bases APC", "*.csv *.xlsx *.xlsm"), ("Todos", "*.*")],
@@ -227,9 +250,14 @@ class APCDesktopApp(ctk.CTk):
             self.registros = self.motor.normalizar_base_reclamos(dataframe)
             self.indice_actual = 0
             self._mostrar_registro_actual()
-            self._actualizar_estado(f"Base cargada: {len(self.registros)} reclamos. Archivo local.")
+            self._copiar_incidente_actual()
+            self._marcar_check("Cargar Base")
+            self._actualizar_estado(
+                f"Base cargada: {len(self.registros)} reclamos. Incidente copiado."
+            )
         except Exception as exc:
             self.logger.exception("No se pudo cargar la base")
+            self._desmarcar_check("Cargar Base")
             messagebox.showerror("Error", str(exc))
 
     def _mostrar_registro_actual(self) -> None:
@@ -248,6 +276,7 @@ class APCDesktopApp(ctk.CTk):
         self.cuenta_var.set(str(self.caso_actual.get("numero_cuenta", "")))
         self.tema_diario_var.set("")
         self._set_text("Resolucion pendiente. Use Leer y Analizar cuando el incidente este abierto en APC.")
+        self._reiniciar_checks()
 
     def _siguiente_reclamo(self) -> None:
         """Avanza al siguiente reclamo de la base cargada."""
@@ -256,39 +285,46 @@ class APCDesktopApp(ctk.CTk):
             return
         self.indice_actual = min(self.indice_actual + 1, len(self.registros) - 1)
         self._mostrar_registro_actual()
+        self._copiar_incidente_actual()
+        self._marcar_check("Cargar Base")
         self._actualizar_estado(
-            f"Reclamo {self.indice_actual + 1} de {len(self.registros)} listo."
+            f"Reclamo {self.indice_actual + 1} de {len(self.registros)} listo e incidente copiado."
         )
 
     def _copiar_y_pegar_en_apc(self) -> None:
-        """Copia el numero y lo pega en APC despues de una pausa breve."""
+        """Pega el incidente en APC y lanza busqueda con Enter."""
         numero = self.incidente_var.get().strip()
         if not numero:
             messagebox.showwarning("Sin numero", "Cargue una base o lea el incidente desde APC.")
             return
 
-        self.clipboard_clear()
-        self.clipboard_append(numero)
-        self.update()
+        self._copiar_incidente_actual()
         self._actualizar_estado(
-            "Numero copiado. Haga click en el campo 'Nro de Operacion' de APC; "
-            "se pegara automaticamente en 3 segundos."
+            "Incidente copiado. Haga foco en 'Nro Operacion:' de APC; "
+            "se pegara y se presionara Enter en 3 segundos."
         )
         self.after(3000, self._pegar_clipboard_en_ventana_activa)
 
     def _pegar_clipboard_en_ventana_activa(self) -> None:
-        """Envia Ctrl+V a la ventana o campo activo."""
+        """Envia Ctrl+V y Enter a la ventana o campo activo."""
         try:
             import pyautogui
 
             pyautogui.hotkey("ctrl", "v")
-            self._actualizar_estado("Numero pegado en la ventana activa.")
-        except ModuleNotFoundError:
+            pyautogui.press("enter")
+            self._marcar_check("Pegar Nro en APC")
             self._actualizar_estado(
-                "Numero copiado al portapapeles. Instale pyautogui para pegado automatico."
+                "Incidente pegado y busqueda lanzada. El click sobre el resultado azul "
+                "queda pendiente del mapeo exacto de APC."
+            )
+        except ModuleNotFoundError:
+            self._desmarcar_check("Pegar Nro en APC")
+            self._actualizar_estado(
+                "Incidente copiado al portapapeles. Instale pyautogui para pegado automatico."
             )
         except Exception as exc:
             self.logger.exception("No se pudo pegar automaticamente")
+            self._desmarcar_check("Pegar Nro en APC")
             self._actualizar_estado(f"No se pudo pegar automaticamente: {exc}")
 
     def _leer_y_analizar(self) -> None:
@@ -301,25 +337,46 @@ class APCDesktopApp(ctk.CTk):
         self.ultimo_analisis = self.motor.analizar_caso(caso)
         self.tema_diario_var.set(str(self.ultimo_analisis.get("tema_diario", "")))
         self._set_text(str(self.ultimo_analisis.get("detalle_diario", "")))
-        self._actualizar_estado("Analisis generado localmente. Revise antes de usar en APC.")
+        self._preparar_documentacion(abrir_carpeta=False)
+        self._marcar_check("Leer y Analizar")
+        self._actualizar_estado(
+            "Detalle/documentos procesados localmente y resolucion sugerida generada."
+        )
 
-    def _preparar_documentacion(self) -> None:
+    def _preparar_documentacion(self, abrir_carpeta: bool = True) -> None:
         """Prepara carpeta local para descargar documentacion desde APC."""
         self.documentos_dir.mkdir(parents=True, exist_ok=True)
         self.clipboard_clear()
         self.clipboard_append(str(self.documentos_dir))
         self.update()
-        try:
-            os.startfile(self.documentos_dir)
-        except OSError:
-            pass
+        if abrir_carpeta:
+            try:
+                os.startfile(self.documentos_dir)
+            except OSError:
+                pass
         self._actualizar_estado(
             "Carpeta de documentacion abierta y ruta copiada. "
             "Descargue desde la solapa Documentacion de APC en esa carpeta."
         )
 
-    def _copiar_diario(self) -> None:
-        """Copia el texto Diario sugerido para pegarlo manualmente en APC."""
+    def _validar_documentacion(self) -> None:
+        """Valida que los documentos descargados existan y sean legibles."""
+        self.documentos_dir.mkdir(parents=True, exist_ok=True)
+        archivos = [archivo for archivo in self.documentos_dir.iterdir() if archivo.is_file()]
+        archivos_validos = [archivo for archivo in archivos if self._archivo_descargado_valido(archivo)]
+        if not archivos_validos:
+            self._desmarcar_check("Documentacion")
+            self._actualizar_estado("No se encontro documentacion descargada para validar.")
+            messagebox.showwarning(
+                "Sin documentacion",
+                "No se encontraron archivos descargados o los archivos estan vacios.",
+            )
+            return
+        self._marcar_check("Documentacion")
+        self._actualizar_estado(f"Documentacion validada: {len(archivos_validos)} archivos.")
+
+    def _informar_resolucion(self) -> None:
+        """Informa tema y detalle en APC mediante portapapeles y pegado asistido."""
         if not self.ultimo_analisis:
             messagebox.showwarning("Sin analisis", "Primero ejecute Leer y Analizar.")
             return
@@ -329,7 +386,11 @@ class APCDesktopApp(ctk.CTk):
         self.clipboard_clear()
         self.clipboard_append(texto)
         self.update()
-        self._actualizar_estado("Tema y Detalle Diario copiados. Pegarlos manualmente en APC luego de revisar.")
+        self._marcar_check("Informar Resolución")
+        self._actualizar_estado(
+            "Tema y Detalle copiados. El pegado automatico en la solapa Diario "
+            "requiere mapeo de campos APC."
+        )
 
     def _caso_desde_campos(self) -> dict[str, Any]:
         """Construye un caso desde los campos visibles."""
@@ -367,6 +428,41 @@ class APCDesktopApp(ctk.CTk):
     def _actualizar_estado(self, mensaje: str) -> None:
         """Actualiza el estado inferior."""
         self.estado_label.configure(text=mensaje)
+
+    def _copiar_incidente_actual(self) -> None:
+        """Copia al portapapeles el incidente visible."""
+        self.clipboard_clear()
+        self.clipboard_append(self.incidente_var.get().strip())
+        self.update()
+
+    def _marcar_check(self, texto_boton: str) -> None:
+        """Marca como validada una accion de boton."""
+        key = texto_boton.lower().replace(" ", "_")
+        if key in self.check_vars:
+            self.check_vars[key].set("✓")
+
+    def _desmarcar_check(self, texto_boton: str) -> None:
+        """Limpia la validacion visual de una accion."""
+        key = texto_boton.lower().replace(" ", "_")
+        if key in self.check_vars:
+            self.check_vars[key].set("○")
+
+    def _reiniciar_checks(self) -> None:
+        """Limpia las validaciones al cambiar de incidente."""
+        for check in self.check_vars.values():
+            check.set("○")
+
+    def _archivo_descargado_valido(self, archivo: Path) -> bool:
+        """Confirma que un archivo descargado exista, pese mas que cero y sea legible."""
+        try:
+            if archivo.stat().st_size <= 0:
+                return False
+            with archivo.open("rb") as stream:
+                stream.read(1)
+            return True
+        except OSError:
+            self.logger.warning("Documento no legible: %s", archivo)
+            return False
 
     def _set_text(self, texto: str) -> None:
         """Reemplaza el panel de resultado."""

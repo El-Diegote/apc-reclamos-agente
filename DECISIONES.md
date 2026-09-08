@@ -61,7 +61,7 @@
 ## Iteracion 6 - Cierre V1 prototipo simple
 
 - Se aprueba una primera version simple de la aplicacion como ventana companera de APC.
-- La app queda en una sola vista con cinco botones: `Cargar Base`, `Pegar Nro en APC`, `Leer y Analizar`, `Documentacion` y `Copiar Diario`.
+- La app queda en una sola vista con cinco botones: `Cargar Base`, `Pegar Nro en APC`, `Leer y Analizar`, `Documentacion` e `Informar Resolución`.
 - El pegado en APC se implementa como asistencia controlada: copia al portapapeles y pega en el campo activo despues de una pausa breve.
 - La descarga automatica desde APC queda fuera de esta version hasta mapear con capturas la solapa `Documentacion`.
 - Se agrega `docs/PROMPT_CAPTURAS_APC.md` para relevar pantallas y detalles necesarios sin exponer informacion confidencial.
@@ -85,3 +85,10 @@
 - Todos los campos del panel `Caso actual` quedan bloqueados para edicion manual.
 - `Caso actual` se trata como informacion fuente proveniente del incidente APC o de la base cargada.
 - La edicion humana queda concentrada en `Resolucion actual`, antes de copiar el texto a APC.
+
+## Iteracion 10 - Validacion por boton
+
+- Se define la funcion estricta de cada boton operativo.
+- Cada boton incorpora un indicador visual de validacion al costado.
+- El check confirma que la accion se completo o quedo preparada dentro del alcance actual.
+- Las acciones que requieren clicks exactos en APC quedan condicionadas al mapeo de pantallas y campos.
