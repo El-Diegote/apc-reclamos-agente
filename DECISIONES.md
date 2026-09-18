@@ -99,3 +99,12 @@
 - El flujo visual queda ordenado como `Acciones`, `Caso actual` y `Resolucion actual`.
 - Se agrega `Limpiar` con confirmacion `Borrar`/`Cancelar`.
 - `Limpiar` resetea el incidente actual, paneles visibles, checks y portapapeles sin borrar archivos descargados.
+
+## Iteracion 12 - Integracion del prompt maestro operativo
+
+- Se incorpora `docs/PROMPT_MAESTRO_CODEX_APC.md` como guia tecnica sanitizada para continuar el desarrollo desde Codex.
+- Las capturas compartidas se usan solo como referencia de avance y roadmap; no se versionan imagenes ni datos reales.
+- Se agregan modulos base para `SmartConsoleAnalyzer`, `DocumentClassifier`, `ClaimUniverseBuilder`, `FraudAssessmentEngine`, `OperationDecisionEngine` y `ResolutionEngine`.
+- La decision se calcula sobre el expediente completo: Detalle APC, Diario, documentacion y Smart Console.
+- La salida sigue siendo una sugerencia revisable: ninguna resolucion se informa en APC sin validacion humana.
+- El criterio `Aprobada` de Smart Console se conserva como dato auxiliar y no como regla unica de decision.

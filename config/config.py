@@ -55,3 +55,30 @@ CANALES_APC: tuple[str, ...] = (
     "eCommerce",
     "Otros",
 )
+
+SMART_CONSOLE_CHANNELS: tuple[str, ...] = (
+    "ATM",
+    "POS",
+    "mPOS",
+    "e-Commerce",
+    "e-Commerce Recurrente",
+    "BNA+",
+    "MODO",
+    "Coelsa",
+    "Transferencia",
+    "DEBIN",
+    "Mobile Banking",
+)
+
+DOCUMENT_TYPES: tuple[str, ...] = (
+    "F60330",
+    "Denuncia",
+    "Extracto",
+    "Comprobante",
+    "Dictamen",
+    "Nota",
+    "Otro",
+)
+
+CIRCUITO_USD_THRESHOLD: float = 15.0
+DEFAULT_COEFICIENTE_DOLAR: float = 1.0

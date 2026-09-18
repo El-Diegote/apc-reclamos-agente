@@ -26,6 +26,10 @@ Incluido:
 - Carga de CSV/XLSX con Pandas y OpenPyXL.
 - Persistencia local SQLite.
 - Motor de sugerencias por resoluciones entrenadas y reglas base.
+- Analizador inicial de exportaciones Smart Console.
+- Clasificador documental inicial para F60330, denuncias, extractos, comprobantes, dictamenes y notas.
+- Constructor de expediente consolidado para decidir sobre el caso completo y no sobre documentos aislados.
+- Motor inicial de decision y resolucion sugerida con aprobacion humana obligatoria.
 - Modo CLI para corrida simulada.
 - Ventana simple para operar en paralelo con APC.
 - Barra lateral con botones funcionales: cargar base, pegar numero en APC, leer y analizar, validar documentacion, informar resolucion en Diario y limpiar el incidente actual.
@@ -160,9 +164,14 @@ apc-reclamos-agente/
 │   ├── agente.py
 │   ├── analizador.py
 │   ├── app_desktop.py
+│   ├── claim_universe_builder.py
 │   ├── database.py
+│   ├── decision_engine.py
+│   ├── document_classifier.py
 │   ├── extractor.py
 │   ├── motor_apc.py
+│   ├── resolution_engine.py
+│   ├── smart_console_analyzer.py
 │   └── utils.py
 ├── config/
 │   └── config.py
@@ -177,6 +186,8 @@ El proyecto no almacena credenciales. Los datos reales, capturas, PDFs, DOCX, XL
 Ver tambien `docs/SEGURIDAD.md`.
 
 El mapeo de pantallas APC debe hacerse con datos sensibles tapados. Ver `docs/PROMPT_CAPTURAS_APC.md`.
+
+El prompt maestro de arquitectura y etapas queda documentado en `docs/PROMPT_MAESTRO_CODEX_APC.md`.
 
 ## Futuro
 

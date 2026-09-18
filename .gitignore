@@ -19,6 +19,10 @@ credenciales/
 # Datos sensibles y documentos reales
 notebook bna/
 notebook_bna/
+actualizaciones/
+capturas_apc/
+capturas/
+screenshots_apc/
 corridas/**/documentos/*.pdf
 corridas/**/documentos/*.PDF
 corridas/**/documentos/*
