@@ -108,3 +108,11 @@
 - La decision se calcula sobre el expediente completo: Detalle APC, Diario, documentacion y Smart Console.
 - La salida sigue siendo una sugerencia revisable: ninguna resolucion se informa en APC sin validacion humana.
 - El criterio `Aprobada` de Smart Console se conserva como dato auxiliar y no como regla unica de decision.
+
+## Iteracion 13 - Conexion del boton Leer y Analizar
+
+- `MotorAPC` incorpora `analizar_expediente` para conectar caso visible, carpeta de documentos, Smart Console, expediente consolidado, decision y resolucion.
+- La app desktop usa ese flujo desde `Leer y Analizar`, dejando el analisis anterior como base/fallback interno.
+- La documentacion local se clasifica con reglas auditables y sin subir archivos reales al repositorio.
+- La primera exportacion tabular compatible se intenta interpretar como Smart Console para generar operaciones, totales y senales LINK GO/ROBO.
+- El resultado completa `Tema` y `Detalle` en `Resolucion actual`, siempre sujeto a revision humana.

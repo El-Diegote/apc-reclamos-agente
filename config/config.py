@@ -36,6 +36,7 @@ DOCUMENT_EXTENSIONS: tuple[str, ...] = (
     ".pdf",
     ".xlsx",
     ".xlsm",
+    ".xls",
     ".csv",
 )
 

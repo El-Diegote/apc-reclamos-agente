@@ -34,6 +34,15 @@ Incluido:
 - Ventana simple para operar en paralelo con APC.
 - Barra lateral con botones funcionales: cargar base, pegar numero en APC, leer y analizar, validar documentacion, informar resolucion en Diario y limpiar el incidente actual.
 
+Flujo actual del boton `Leer y Analizar`:
+
+- Toma el caso visible en pantalla.
+- Revisa la carpeta local de documentacion de la corrida.
+- Clasifica documentos disponibles.
+- Detecta y analiza una exportacion compatible de Smart Console.
+- Construye el expediente consolidado.
+- Genera `Tema` y `Detalle` sugeridos para Diario APC.
+
 No incluido:
 
 - Modificacion de informacion en APC.

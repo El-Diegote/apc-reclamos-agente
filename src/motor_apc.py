@@ -6,13 +6,19 @@ import json
 import logging
 import re
 import unicodedata
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
-from config.config import BASE_RECLAMOS_EXTENSIONS, EXPORTS_DIR
+from config.config import BASE_RECLAMOS_EXTENSIONS, DOCUMENT_EXTENSIONS, EXPORTS_DIR
+from src.claim_universe_builder import ClaimUniverseBuilder
 from src.database import RepositorioAPC
+from src.decision_engine import OperationDecisionEngine
+from src.document_classifier import DocumentClassifier
+from src.resolution_engine import ResolutionEngine
+from src.smart_console_analyzer import SmartConsoleAnalyzer
 from src.utils import parsear_importe, timestamp_actual
 
 
@@ -169,6 +175,57 @@ class MotorAPC:
         self.logger.info("Caso analizado: %s", resultado.get("numero_incidente"))
         return resultado
 
+    def analizar_expediente(
+        self,
+        caso: dict[str, Any],
+        documentos_dir: Path | None = None,
+    ) -> dict[str, Any]:
+        """Analiza un expediente APC completo con los motores operativos.
+
+        Args:
+            caso: Datos visibles del caso actual.
+            documentos_dir: Carpeta local con documentacion o exportaciones descargadas.
+
+        Returns:
+            Analisis enriquecido con documentacion, Smart Console, decision y resolucion.
+        """
+        caso_normalizado = self._normalizar_registro(caso)
+        archivos = self._listar_archivos_expediente(documentos_dir)
+        documentos = self._clasificar_documentos(archivos)
+        smart_console = self._analizar_smart_console(archivos)
+
+        universo = ClaimUniverseBuilder(logger=self.logger).construir(
+            detalle_apc=caso_normalizado,
+            diario_apc=[],
+            documentacion=documentos,
+            smart_console=smart_console,
+        )
+        decision_engine = OperationDecisionEngine(
+            coeficiente_dolar=self.coeficiente_dolar,
+            logger=self.logger,
+        )
+        resolucion_engine = ResolutionEngine(decision_engine=decision_engine, logger=self.logger)
+        resolucion = resolucion_engine.generar(
+            universo,
+            resoluciones_entrenadas=self.repositorio.listar_resoluciones(),
+        )
+
+        analisis_base = self.analizar_caso(caso_normalizado)
+        resultado = {
+            **analisis_base,
+            "documentos_clasificados": documentos,
+            "smart_console": smart_console,
+            "universo_reclamo": universo,
+            "decision_operativa": resolucion["decision"],
+            "evaluacion_fraude": resolucion["evaluacion_fraude"],
+            "tema_diario": resolucion["tema"],
+            "detalle_diario": resolucion["detalle"],
+            "fuente_sugerencia": resolucion["fuente"],
+            "requiere_aprobacion_humana": True,
+        }
+        self.logger.info("Expediente analizado: %s", resultado.get("numero_incidente"))
+        return resultado
+
     def generar_resolucion_sugerida(self, caso: dict[str, Any]) -> str:
         """Genera una resolucion base cuando no hay entrenamiento especifico.
 
@@ -292,6 +349,72 @@ class MotorAPC:
             Resoluciones disponibles.
         """
         return self.repositorio.listar_resoluciones()
+
+    def _listar_archivos_expediente(self, documentos_dir: Path | None) -> list[Path]:
+        """Lista archivos locales aptos para el analisis del expediente.
+
+        Args:
+            documentos_dir: Carpeta local de documentacion.
+
+        Returns:
+            Archivos soportados encontrados.
+        """
+        if documentos_dir is None or not documentos_dir.exists():
+            return []
+        return [
+            archivo
+            for archivo in sorted(documentos_dir.iterdir())
+            if archivo.is_file() and archivo.suffix.lower() in DOCUMENT_EXTENSIONS
+        ]
+
+    def _clasificar_documentos(self, archivos: list[Path]) -> list[dict[str, Any]]:
+        """Clasifica documentos locales descargados o aportados.
+
+        Args:
+            archivos: Archivos del expediente.
+
+        Returns:
+            Clasificaciones documentales serializables.
+        """
+        clasificador = DocumentClassifier(logger=self.logger)
+        clasificaciones: list[dict[str, Any]] = []
+        for archivo in archivos:
+            try:
+                clasificaciones.append(asdict(clasificador.clasificar_archivo(archivo)))
+            except Exception as exc:
+                self.logger.warning("No se pudo clasificar %s: %s", archivo.name, exc)
+                clasificaciones.append(
+                    {
+                        "archivo": archivo.name,
+                        "tipo_documento": "Otro",
+                        "confianza": 0.0,
+                        "senales": [],
+                        "requiere_ocr": archivo.suffix.lower() == ".pdf",
+                        "error": str(exc),
+                    }
+                )
+        return clasificaciones
+
+    def _analizar_smart_console(self, archivos: list[Path]) -> dict[str, Any]:
+        """Detecta y analiza la primera exportacion compatible de Smart Console.
+
+        Args:
+            archivos: Archivos disponibles del expediente.
+
+        Returns:
+            Resumen Smart Console o diccionario vacio si no hay archivo compatible.
+        """
+        analizador = SmartConsoleAnalyzer(logger=self.logger)
+        for archivo in archivos:
+            if archivo.suffix.lower() not in {".csv", ".xlsx", ".xlsm", ".xls"}:
+                continue
+            try:
+                resumen = analizador.analizar_archivo(archivo)
+                if resumen.get("total_operaciones", 0) > 0:
+                    return resumen
+            except Exception as exc:
+                self.logger.info("Archivo omitido como Smart Console %s: %s", archivo.name, exc)
+        return {}
 
     def normalizar_registro_publico(self, fila: dict[str, Any]) -> dict[str, Any]:
         """Normaliza un registro para usarlo desde la interfaz.

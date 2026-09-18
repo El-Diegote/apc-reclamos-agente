@@ -360,19 +360,18 @@ class APCDesktopApp(ctk.CTk):
             self._actualizar_estado(f"No se pudo pegar automaticamente: {exc}")
 
     def _leer_y_analizar(self) -> None:
-        """Lee documentos locales y genera analisis sugerido."""
+        """Lee el expediente local y genera analisis sugerido."""
         caso = self._caso_desde_campos()
-        textos = self._leer_documentos_locales()
-        if textos and not caso["motivo"]:
-            caso["motivo"] = "Informacion complementada desde documentos locales"
 
-        self.ultimo_analisis = self.motor.analizar_caso(caso)
+        self.ultimo_analisis = self.motor.analizar_expediente(caso, self.documentos_dir)
         self.tema_diario_var.set(str(self.ultimo_analisis.get("tema_diario", "")))
         self._set_text(str(self.ultimo_analisis.get("detalle_diario", "")))
         self._preparar_documentacion(abrir_carpeta=False)
         self._marcar_check("Leer y Analizar")
+        if self.ultimo_analisis.get("documentos_clasificados"):
+            self._marcar_check("Documentación")
         self._actualizar_estado(
-            "Detalle/documentos procesados localmente y resolucion sugerida generada."
+            self._resumen_analisis_estado(self.ultimo_analisis)
         )
 
     def _preparar_documentacion(self, abrir_carpeta: bool = True) -> None:
@@ -514,6 +513,24 @@ class APCDesktopApp(ctk.CTk):
             except Exception as exc:
                 self.logger.warning("Documento omitido %s: %s", archivo.name, exc)
         return textos
+
+    def _resumen_analisis_estado(self, analisis: dict[str, Any]) -> str:
+        """Resume el analisis para la barra de estado.
+
+        Args:
+            analisis: Resultado devuelto por MotorAPC.
+
+        Returns:
+            Mensaje breve para el usuario.
+        """
+        documentos = len(analisis.get("documentos_clasificados", []) or [])
+        smart_console = analisis.get("smart_console", {}) or {}
+        decision = (analisis.get("decision_operativa", {}) or {}).get("decision", "REVISION")
+        operaciones = smart_console.get("total_operaciones", 0)
+        return (
+            f"Analisis listo. Documentos: {documentos}. "
+            f"Operaciones Smart Console: {operaciones}. Decision sugerida: {decision}."
+        )
 
     def _actualizar_estado(self, mensaje: str) -> None:
         """Actualiza el estado inferior."""
