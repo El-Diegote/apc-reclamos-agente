@@ -106,10 +106,10 @@ class APCDesktopApp(ctk.CTk):
         botones = [
             ("Cargar Base", self._cargar_base),
             ("Actualizar Resoluciones", self._seleccionar_y_actualizar_resoluciones),
-            ("Cargar Smart Console", self._seleccionar_smart_console),
-            ("Pegar Nro en APC", self._copiar_y_pegar_en_apc),
-            ("Leer y Analizar", self._leer_y_analizar),
+            ("Número APC", self._copiar_y_pegar_en_apc),
             ("Documentación", self._validar_documentacion),
+            ("Cargar Smart Console", self._seleccionar_smart_console),
+            ("Leer y Analizar", self._leer_y_analizar),
             ("Informar Resolución", self._informar_resolucion),
         ]
         for fila, (texto, comando) in enumerate(botones, start=1):
@@ -191,7 +191,7 @@ class APCDesktopApp(ctk.CTk):
             "1.0",
             "Esperando accion.\n\n"
             "1. Cargue la Base de Reclamos.\n"
-            "2. Pegue el Nro en APC.\n"
+            "2. Use Número APC para pegar el incidente en APC.\n"
             "3. Busque el incidente en APC.\n"
             "4. Use Leer y Analizar para completar Tema y Detalle.",
         )
@@ -448,19 +448,19 @@ class APCDesktopApp(ctk.CTk):
 
             pyautogui.hotkey("ctrl", "v")
             pyautogui.press("enter")
-            self._marcar_check("Pegar Nro en APC")
+            self._marcar_check("Número APC")
             self._actualizar_estado(
                 "Incidente pegado y busqueda lanzada. El click sobre el resultado azul "
                 "queda pendiente del mapeo exacto de APC."
             )
         except ModuleNotFoundError:
-            self._desmarcar_check("Pegar Nro en APC")
+            self._desmarcar_check("Número APC")
             self._actualizar_estado(
                 "Incidente copiado al portapapeles. Instale pyautogui para pegado automatico."
             )
         except Exception as exc:
             self.logger.exception("No se pudo pegar automaticamente")
-            self._desmarcar_check("Pegar Nro en APC")
+            self._desmarcar_check("Número APC")
             self._actualizar_estado(f"No se pudo pegar automaticamente: {exc}")
 
     def _leer_y_analizar(self) -> None:

@@ -139,3 +139,8 @@
 - El analizador reconoce aliases reales de Smart Console como `Cta.Dde.`, `Cta.Hta.`, `Cod. Rta.` y `Den Establecimiento`.
 - El valor `1.0` en `CHECK` se interpreta como operacion marcada.
 - Se agrega modo de apertura de app con `--smart-console` y `--auto-analizar` para pruebas locales controladas.
+
+## Iteracion 17 - Orden operativo de botones
+
+- Se ordena la barra lateral como `Cargar Base`, `Actualizar Resoluciones`, `Número APC`, `Documentación`, `Cargar Smart Console`, `Leer y Analizar`, `Informar Resolución` y `Limpiar`.
+- El boton anterior `Pegar Nro en APC` pasa a llamarse `Número APC`.

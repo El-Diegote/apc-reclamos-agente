@@ -34,7 +34,7 @@ Incluido:
 - Ruta local configurable para actualizar resoluciones cuando cambie el Excel vigente.
 - Modo CLI para corrida simulada.
 - Ventana simple para operar en paralelo con APC.
-- Barra lateral con botones funcionales: cargar base, pegar numero en APC, leer y analizar, validar documentacion, informar resolucion en Diario y limpiar el incidente actual.
+- Barra lateral con botones funcionales: cargar base, actualizar resoluciones, numero APC, documentacion, cargar Smart Console, leer y analizar, informar resolucion en Diario y limpiar el incidente actual.
 
 Flujo actual del boton `Leer y Analizar`:
 
