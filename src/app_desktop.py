@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from pathlib import Path
 from tkinter import filedialog, messagebox
 from typing import Any
@@ -185,6 +186,7 @@ class APCDesktopApp(ctk.CTk):
         self.tema_diario_entry.bind("<KeyRelease>", self._registrar_cambio_resolucion)
         ctk.CTkLabel(salida, text="Detalle").grid(row=3, column=0, padx=14, pady=(0, 4), sticky="w")
         self.resultado_text = ctk.CTkTextbox(salida, height=300)
+        self._configurar_ajuste_detalle()
         self.resultado_text.grid(row=4, column=0, padx=14, pady=(0, 14), sticky="nsew")
         self.resultado_text.bind("<KeyRelease>", self._registrar_cambio_resolucion)
         self.resultado_text.insert(
@@ -698,13 +700,39 @@ class APCDesktopApp(ctk.CTk):
 
     def _set_text(self, texto: str) -> None:
         """Reemplaza el panel de resultado."""
+        texto_formateado = self._formatear_detalle_para_lectura(texto)
         self.resultado_text.configure(state="normal")
         self.resultado_text.delete("1.0", "end")
-        self.resultado_text.insert("1.0", texto)
+        self.resultado_text.insert("1.0", texto_formateado)
         self.resolucion_editable = False
         self.tema_diario_entry.configure(state="disabled")
         self.resultado_text.configure(state="disabled")
         self.resolucion_historial = [self._snapshot_resolucion()]
+
+    def _configurar_ajuste_detalle(self) -> None:
+        """Configura el ajuste visual del Detalle por palabra."""
+        textbox = getattr(self.resultado_text, "_textbox", None)
+        if textbox is not None:
+            textbox.configure(wrap="word")
+
+    def _formatear_detalle_para_lectura(self, texto: str) -> str:
+        """Normaliza el Detalle para lectura en pantalla.
+
+        Args:
+            texto: Texto sugerido para el campo Detalle.
+
+        Returns:
+            Texto con espacios y parrafos normalizados. El ajuste visual de linea
+            queda a cargo del textbox con wrap por palabra.
+        """
+        limpio = str(texto or "").replace("\r\n", "\n").replace("\r", "\n")
+        limpio = re.sub(r"[ \t]+", " ", limpio)
+        parrafos = [
+            re.sub(r"\s*\n\s*", " ", parrafo).strip()
+            for parrafo in re.split(r"\n{2,}", limpio)
+            if parrafo.strip()
+        ]
+        return "\n\n".join(parrafos)
 
     def _habilitar_edicion_resolucion(self) -> None:
         """Permite editar manualmente tema y detalle sugeridos."""
