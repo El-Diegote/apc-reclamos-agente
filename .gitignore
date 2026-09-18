@@ -54,6 +54,7 @@ logs/
 data/*.db
 data/*.sqlite
 data/*.sqlite3
+data/*.json
 exports/*.json
 exports/*.xlsx
 exports/*.csv

@@ -12,6 +12,7 @@ import customtkinter as ctk
 import pandas as pd
 
 from config.config import CORRIDAS_DIR, DEFAULT_CORRIDA
+from src.app_settings import AppSettings
 from src.extractor import Extractor
 from src.motor_apc import MotorAPC
 from src.utils import parsear_importe
@@ -29,6 +30,7 @@ class APCDesktopApp(ctk.CTk):
         super().__init__()
         self.logger = logging.getLogger(self.__class__.__name__)
         self.motor = motor or MotorAPC(logger=self.logger)
+        self.settings = AppSettings(logger=self.logger)
         self.registros: list[dict[str, Any]] = []
         self.indice_actual = 0
         self.caso_actual: dict[str, Any] | None = None
@@ -48,6 +50,7 @@ class APCDesktopApp(ctk.CTk):
 
         self._crear_layout()
         self._actualizar_estado("Cargue una base o lea el incidente APC para completar el caso actual.")
+        self.after(700, self._verificar_resoluciones_al_inicio)
 
     def _crear_layout(self) -> None:
         """Construye una unica vista con botones operativos."""
@@ -90,6 +93,7 @@ class APCDesktopApp(ctk.CTk):
 
         botones = [
             ("Cargar Base", self._cargar_base),
+            ("Actualizar Resoluciones", self._seleccionar_y_actualizar_resoluciones),
             ("Pegar Nro en APC", self._copiar_y_pegar_en_apc),
             ("Leer y Analizar", self._leer_y_analizar),
             ("Documentación", self._validar_documentacion),
@@ -102,7 +106,7 @@ class APCDesktopApp(ctk.CTk):
             actions,
             "Limpiar",
             self._confirmar_limpiar_incidente,
-            6,
+            len(botones) + 1,
             fg_color="#7F1D1D",
             hover_color="#991B1B",
             pady=(18, 14),
@@ -290,6 +294,70 @@ class APCDesktopApp(ctk.CTk):
         except Exception as exc:
             self.logger.exception("No se pudo cargar la base")
             self._desmarcar_check("Cargar Base")
+            messagebox.showerror("Error", str(exc))
+
+    def _verificar_resoluciones_al_inicio(self) -> None:
+        """Detecta si el Excel vigente de resoluciones necesita carga."""
+        ruta = self.settings.obtener_ruta_resoluciones_apc()
+        if not ruta.exists():
+            self._actualizar_estado(
+                "No se encontro RESOLUCIONES APC en la ruta configurada. "
+                "Use Actualizar Resoluciones para elegir el archivo."
+            )
+            return
+
+        try:
+            estado = self.motor.estado_resoluciones_apc(ruta)
+        except Exception as exc:
+            self.logger.warning("No se pudo verificar RESOLUCIONES APC: %s", exc)
+            self._actualizar_estado("No se pudo verificar RESOLUCIONES APC.")
+            return
+
+        if estado["ya_cargada"]:
+            self._marcar_check("Actualizar Resoluciones")
+            self._actualizar_estado("Resoluciones APC vigentes ya entrenadas.")
+            return
+
+        confirmar = messagebox.askyesno(
+            "Actualizar Resoluciones APC",
+            "Se detecto una version no entrenada de RESOLUCIONES APC.\n\n"
+            "¿Desea actualizar la base local ahora?",
+        )
+        if confirmar:
+            self._actualizar_resoluciones_desde_ruta(ruta, guardar_preferencia=False)
+
+    def _seleccionar_y_actualizar_resoluciones(self) -> None:
+        """Permite elegir el Excel fuente y actualizar resoluciones."""
+        ruta_actual = self.settings.obtener_ruta_resoluciones_apc()
+        initial_dir = ruta_actual.parent if ruta_actual.parent.exists() else Path.home()
+        archivo = filedialog.askopenfilename(
+            title="Seleccionar RESOLUCIONES APC",
+            initialdir=str(initial_dir),
+            filetypes=[("Excel", "*.xlsx *.xlsm *.xls"), ("Todos", "*.*")],
+        )
+        if not archivo:
+            return
+        self._actualizar_resoluciones_desde_ruta(Path(archivo), guardar_preferencia=True)
+
+    def _actualizar_resoluciones_desde_ruta(
+        self,
+        ruta: Path,
+        guardar_preferencia: bool,
+    ) -> None:
+        """Actualiza resoluciones desde una ruta local."""
+        try:
+            resultado = self.motor.actualizar_resoluciones_apc(ruta)
+            if guardar_preferencia:
+                self.settings.guardar_ruta_resoluciones_apc(ruta)
+            self._marcar_check("Actualizar Resoluciones")
+            self._actualizar_estado(resultado["mensaje"])
+            messagebox.showinfo(
+                "Resoluciones APC",
+                f"{resultado['mensaje']}\n\nArchivo: {ruta.name}",
+            )
+        except Exception as exc:
+            self.logger.exception("No se pudieron actualizar resoluciones APC")
+            self._desmarcar_check("Actualizar Resoluciones")
             messagebox.showerror("Error", str(exc))
 
     def _mostrar_registro_actual(self) -> None:

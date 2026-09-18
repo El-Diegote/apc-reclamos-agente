@@ -3,6 +3,7 @@
 __all__ = [
     "agente",
     "analizador",
+    "app_settings",
     "claim_universe_builder",
     "decision_engine",
     "document_classifier",

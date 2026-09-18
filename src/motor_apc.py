@@ -137,6 +137,49 @@ class MotorAPC:
         self.logger.info("Resoluciones entrenadas desde Excel: %s", entrenadas)
         return entrenadas
 
+    def estado_resoluciones_apc(self, archivo: Path) -> dict[str, Any]:
+        """Consulta si el Excel de resoluciones ya esta entrenado.
+
+        Args:
+            archivo: Ruta local del Excel RESOLUCIONES APC.
+
+        Returns:
+            Estado de version y carga.
+        """
+        cargador = ResolutionCatalogLoader(logger=self.logger)
+        version = cargador.version_archivo(archivo)
+        return {
+            "archivo": str(archivo),
+            "version_origen": version,
+            "ya_cargada": self.repositorio.version_resoluciones_cargada(version),
+        }
+
+    def actualizar_resoluciones_apc(self, archivo: Path) -> dict[str, Any]:
+        """Actualiza resoluciones solo si la version no fue cargada.
+
+        Args:
+            archivo: Ruta local del Excel RESOLUCIONES APC.
+
+        Returns:
+            Resultado de actualizacion con conteos y version.
+        """
+        estado = self.estado_resoluciones_apc(archivo)
+        if estado["ya_cargada"]:
+            return {
+                **estado,
+                "resoluciones_nuevas": 0,
+                "actualizado": False,
+                "mensaje": "La version vigente ya estaba entrenada.",
+            }
+
+        nuevas = self.entrenar_desde_excel_resoluciones(archivo)
+        return {
+            **estado,
+            "resoluciones_nuevas": nuevas,
+            "actualizado": nuevas > 0,
+            "mensaje": f"Resoluciones APC actualizadas: {nuevas} nuevas.",
+        }
+
     def analizar_caso(self, caso: dict[str, Any]) -> dict[str, Any]:
         """Analiza un caso y genera sugerencias revisables.
 

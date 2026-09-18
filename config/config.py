@@ -13,6 +13,10 @@ EXPORTS_DIR: Path = ROOT_DIR / "exports"
 
 OUTPUT_TEMPLATE_PATH: Path = TEMPLATES_DIR / "output_template.json"
 SQLITE_DB_PATH: Path = DATA_DIR / "apc_reclamos.db"
+LOCAL_SETTINGS_PATH: Path = DATA_DIR / "local_settings.json"
+DEFAULT_RESOLUCIONES_APC_PATH: Path = Path(
+    r"C:\apc-reclamos-agente\notebook bna\RESOLUCIONES APC.xlsx"
+)
 
 DEFAULT_CORRIDA: str = "corrida_1"
 DEFAULT_CSV_NAME: str = "csv_diario.csv"

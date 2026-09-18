@@ -228,6 +228,30 @@ class RepositorioAPC:
             ).fetchall()
         return [dict(fila) for fila in filas]
 
+    def version_resoluciones_cargada(self, version_origen: str) -> bool:
+        """Indica si una version del Excel ya fue entrenada.
+
+        Args:
+            version_origen: Version calculada del archivo fuente.
+
+        Returns:
+            `True` si existe al menos una resolucion de esa version.
+        """
+        if not version_origen:
+            return False
+        with self._conectar() as conexion:
+            fila = conexion.execute(
+                """
+                SELECT 1
+                FROM resoluciones
+                WHERE version_origen = ?
+                  AND activa = 1
+                LIMIT 1
+                """,
+                (version_origen,),
+            ).fetchone()
+        return fila is not None
+
     def guardar_base_reclamos(
         self,
         filas: list[dict[str, Any]],

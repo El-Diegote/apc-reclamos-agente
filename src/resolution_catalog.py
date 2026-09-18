@@ -115,6 +115,19 @@ class ResolutionCatalogLoader:
             return None
         return float(coeficientes[-1]["valor"])
 
+    def version_archivo(self, archivo: Path) -> str:
+        """Calcula la version del archivo sin leer su contenido tabular.
+
+        Args:
+            archivo: Ruta del Excel de resoluciones.
+
+        Returns:
+            Version estable basada en fecha de modificacion y hash.
+        """
+        if not archivo.exists():
+            raise FileNotFoundError(f"No existe el archivo de resoluciones: {archivo}")
+        return self._version_archivo(archivo)
+
     def _detectar_header_resoluciones(self, hoja: Worksheet) -> dict[str, int] | None:
         """Detecta la fila de encabezados TEMA/NOTA."""
         for fila in hoja.iter_rows(max_row=min(hoja.max_row, self.HEADER_SCAN_ROWS)):

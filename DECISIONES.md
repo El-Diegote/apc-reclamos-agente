@@ -124,3 +124,11 @@
 - Las resoluciones entrenadas guardan origen, version del archivo, hoja, fila y vigencias opcionales.
 - El coeficiente dolar se extrae desde la zona del catalogo y actualiza el motor al entrenar.
 - Se evita duplicar una misma fila cuando se vuelve a cargar exactamente la misma version del archivo.
+
+## Iteracion 15 - Actualizacion local de resoluciones
+
+- Se define una ruta predeterminada local para `RESOLUCIONES APC.xlsx` en esta maquina.
+- La app permite elegir otro Excel y guarda esa preferencia en `data/local_settings.json`, archivo excluido de GitHub.
+- Al iniciar, la app verifica si la version del Excel configurado ya fue entrenada.
+- Si detecta una version nueva, pide confirmacion antes de actualizar la base local.
+- El boton `Actualizar Resoluciones` permite reentrenar cuando cambien mecanismos, tecnologia, normativa o restricciones.
