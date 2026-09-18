@@ -187,8 +187,6 @@ Ver tambien `docs/SEGURIDAD.md`.
 
 El mapeo de pantallas APC debe hacerse con datos sensibles tapados. Ver `docs/PROMPT_CAPTURAS_APC.md`.
 
-El prompt maestro de arquitectura y etapas queda documentado en `docs/PROMPT_MAESTRO_CODEX_APC.md`.
-
 ## Futuro
 
 - Integracion Playwright para lectura asistida de APC.

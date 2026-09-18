@@ -100,9 +100,9 @@
 - Se agrega `Limpiar` con confirmacion `Borrar`/`Cancelar`.
 - `Limpiar` resetea el incidente actual, paneles visibles, checks y portapapeles sin borrar archivos descargados.
 
-## Iteracion 12 - Integracion del prompt maestro operativo
+## Iteracion 12 - Uso local del prompt maestro operativo
 
-- Se incorpora `docs/PROMPT_MAESTRO_CODEX_APC.md` como guia tecnica sanitizada para continuar el desarrollo desde Codex.
+- Se usa el prompt maestro operativo como insumo local de trabajo, sin versionar su contenido en GitHub.
 - Las capturas compartidas se usan solo como referencia de avance y roadmap; no se versionan imagenes ni datos reales.
 - Se agregan modulos base para `SmartConsoleAnalyzer`, `DocumentClassifier`, `ClaimUniverseBuilder`, `FraudAssessmentEngine`, `OperationDecisionEngine` y `ResolutionEngine`.
 - La decision se calcula sobre el expediente completo: Detalle APC, Diario, documentacion y Smart Console.
