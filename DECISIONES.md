@@ -132,3 +132,10 @@
 - Al iniciar, la app verifica si la version del Excel configurado ya fue entrenada.
 - Si detecta una version nueva, pide confirmacion antes de actualizar la base local.
 - El boton `Actualizar Resoluciones` permite reentrenar cuando cambien mecanismos, tecnologia, normativa o restricciones.
+
+## Iteracion 16 - Prueba con exportacion Smart Console
+
+- Se agrega `Cargar Smart Console` para seleccionar una exportacion tabular local sin copiarla al repositorio.
+- El analizador reconoce aliases reales de Smart Console como `Cta.Dde.`, `Cta.Hta.`, `Cod. Rta.` y `Den Establecimiento`.
+- El valor `1.0` en `CHECK` se interpreta como operacion marcada.
+- Se agrega modo de apertura de app con `--smart-console` y `--auto-analizar` para pruebas locales controladas.

@@ -17,6 +17,7 @@ LOCAL_SETTINGS_PATH: Path = DATA_DIR / "local_settings.json"
 DEFAULT_RESOLUCIONES_APC_PATH: Path = Path(
     r"C:\apc-reclamos-agente\notebook bna\RESOLUCIONES APC.xlsx"
 )
+DEFAULT_SMART_CONSOLE_DIR: Path = Path(r"C:\apc-reclamos-agente\notebook bna")
 
 DEFAULT_CORRIDA: str = "corrida_1"
 DEFAULT_CSV_NAME: str = "csv_diario.csv"

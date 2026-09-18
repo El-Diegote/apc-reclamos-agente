@@ -81,14 +81,22 @@ class ResolutionEngine:
         motivo = str(universo.get("motivo", "")).lower()
         decision_texto = str(decision.get("decision", "")).lower()
 
+        mejor: tuple[int, dict[str, Any] | None] = (0, None)
         for resolucion in resoluciones:
             canal = str(resolucion.get("canal", "")).lower()
             patron = str(resolucion.get("motivo", "")).lower()
-            if canal and canal not in canales and canal != "otros":
+            score = 0
+            if canal and canal in canales:
+                score += 3
+            elif canal and canal != "otros":
                 continue
             if patron and (patron in motivo or patron in decision_texto or decision_texto in patron):
-                return resolucion
-        return None
+                score += 5
+            if patron and any(canal_texto and canal_texto in patron for canal_texto in canales):
+                score += 2
+            if score > mejor[0]:
+                mejor = (score, resolucion)
+        return mejor[1]
 
     def _tema_base(self, universo: dict[str, Any], decision: dict[str, Any]) -> str:
         """Construye un Tema base para APC."""

@@ -39,7 +39,7 @@ class SmartConsoleOperation:
 class SmartConsoleAnalyzer:
     """Normaliza y resume movimientos exportados desde Smart Console."""
 
-    TRUE_VALUES = {"1", "x", "si", "sí", "true", "ok", "marcado", "resaltado", "check"}
+    TRUE_VALUES = {"1", "1.0", "x", "si", "sí", "true", "ok", "marcado", "resaltado", "check"}
 
     COLUMN_ALIASES: dict[str, tuple[str, ...]] = {
         "fecha": ("fecha", "fecha trx", "fecha operacion", "dia"),
@@ -47,11 +47,16 @@ class SmartConsoleAnalyzer:
         "importe": ("importe $", "importe", "monto", "monto operacion"),
         "moneda": ("moneda", "divisa"),
         "tarjeta": ("tarjeta", "nro tarjeta", "numero tarjeta", "pan"),
-        "cuenta_origen": ("cuenta desde", "cta desde", "cuenta origen", "cta origen"),
-        "cuenta_destino": ("cuenta hasta", "cta hasta", "cuenta destino", "cta destino"),
+        "cuenta_origen": ("cuenta desde", "cta desde", "cta dde", "cuenta origen", "cta origen"),
+        "cuenta_destino": ("cuenta hasta", "cta hasta", "cta hta", "cuenta destino", "cta destino"),
         "canal": ("canal", "tipo canal", "origen", "tema"),
-        "respuesta": ("respuesta", "estado", "codigo respuesta", "descripcion respuesta"),
-        "denominacion": ("denominacion de establecimiento", "establecimiento", "comercio"),
+        "respuesta": ("respuesta", "estado", "codigo respuesta", "cod rta", "descripcion respuesta"),
+        "denominacion": (
+            "denominacion de establecimiento",
+            "den establecimiento",
+            "establecimiento",
+            "comercio",
+        ),
         "ip": ("ip", "direccion ip"),
         "pais": ("pais", "país"),
         "check": ("check", "seleccionado", "seleccionada", "resaltado", "marcado"),

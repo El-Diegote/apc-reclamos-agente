@@ -224,18 +224,20 @@ class MotorAPC:
         self,
         caso: dict[str, Any],
         documentos_dir: Path | None = None,
+        archivos_extra: list[Path] | None = None,
     ) -> dict[str, Any]:
         """Analiza un expediente APC completo con los motores operativos.
 
         Args:
             caso: Datos visibles del caso actual.
             documentos_dir: Carpeta local con documentacion o exportaciones descargadas.
+            archivos_extra: Archivos locales seleccionados manualmente.
 
         Returns:
             Analisis enriquecido con documentacion, Smart Console, decision y resolucion.
         """
         caso_normalizado = self._normalizar_registro(caso)
-        archivos = self._listar_archivos_expediente(documentos_dir)
+        archivos = self._listar_archivos_expediente(documentos_dir, archivos_extra)
         documentos = self._clasificar_documentos(archivos)
         smart_console = self._analizar_smart_console(archivos)
 
@@ -395,22 +397,31 @@ class MotorAPC:
         """
         return self.repositorio.listar_resoluciones()
 
-    def _listar_archivos_expediente(self, documentos_dir: Path | None) -> list[Path]:
+    def _listar_archivos_expediente(
+        self,
+        documentos_dir: Path | None,
+        archivos_extra: list[Path] | None = None,
+    ) -> list[Path]:
         """Lista archivos locales aptos para el analisis del expediente.
 
         Args:
             documentos_dir: Carpeta local de documentacion.
+            archivos_extra: Archivos locales seleccionados manualmente.
 
         Returns:
             Archivos soportados encontrados.
         """
-        if documentos_dir is None or not documentos_dir.exists():
-            return []
-        return [
-            archivo
-            for archivo in sorted(documentos_dir.iterdir())
-            if archivo.is_file() and archivo.suffix.lower() in DOCUMENT_EXTENSIONS
-        ]
+        archivos: list[Path] = []
+        if documentos_dir is not None and documentos_dir.exists():
+            archivos.extend(
+                archivo
+                for archivo in sorted(documentos_dir.iterdir())
+                if archivo.is_file() and archivo.suffix.lower() in DOCUMENT_EXTENSIONS
+            )
+        for archivo in archivos_extra or []:
+            if archivo.is_file() and archivo.suffix.lower() in DOCUMENT_EXTENSIONS:
+                archivos.append(archivo)
+        return list(dict.fromkeys(archivos))
 
     def _clasificar_documentos(self, archivos: list[Path]) -> list[dict[str, Any]]:
         """Clasifica documentos locales descargados o aportados.

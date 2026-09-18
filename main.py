@@ -41,6 +41,15 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--incidente", help="Numero de incidente a procesar.")
     parser.add_argument("--corrida", default=DEFAULT_CORRIDA, help="Carpeta de corrida a usar.")
+    parser.add_argument(
+        "--smart-console",
+        help="Ruta opcional a una exportacion Smart Console para abrirla en la app.",
+    )
+    parser.add_argument(
+        "--auto-analizar",
+        action="store_true",
+        help="Analiza automaticamente el archivo Smart Console inicial en la app.",
+    )
     return parser.parse_args()
 
 
@@ -95,7 +104,10 @@ def main() -> int:
     try:
         from src.app_desktop import ejecutar_app
 
-        ejecutar_app()
+        ejecutar_app(
+            smart_console_path=Path(args.smart_console) if args.smart_console else None,
+            auto_analizar=args.auto_analizar,
+        )
         return 0
     except ModuleNotFoundError as exc:
         if exc.name == "customtkinter":

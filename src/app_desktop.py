@@ -11,7 +11,7 @@ from typing import Any
 import customtkinter as ctk
 import pandas as pd
 
-from config.config import CORRIDAS_DIR, DEFAULT_CORRIDA
+from config.config import CORRIDAS_DIR, DEFAULT_CORRIDA, DEFAULT_SMART_CONSOLE_DIR
 from src.app_settings import AppSettings
 from src.extractor import Extractor
 from src.motor_apc import MotorAPC
@@ -21,11 +21,18 @@ from src.utils import parsear_importe
 class APCDesktopApp(ctk.CTk):
     """Ventana companera para trabajar en paralelo con APC."""
 
-    def __init__(self, motor: MotorAPC | None = None) -> None:
+    def __init__(
+        self,
+        motor: MotorAPC | None = None,
+        initial_smart_console: Path | None = None,
+        auto_analizar: bool = False,
+    ) -> None:
         """Inicializa la aplicacion.
 
         Args:
             motor: Motor APC opcional para pruebas.
+            initial_smart_console: Exportacion Smart Console inicial opcional.
+            auto_analizar: Indica si debe analizar automaticamente el archivo inicial.
         """
         super().__init__()
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -36,6 +43,7 @@ class APCDesktopApp(ctk.CTk):
         self.caso_actual: dict[str, Any] | None = None
         self.ultimo_analisis: dict[str, Any] | None = None
         self.documentos_dir = CORRIDAS_DIR / DEFAULT_CORRIDA / "documentos"
+        self.smart_console_archivos: list[Path] = []
         self.importe_base = 0.0
         self.moneda_previa = "Peso"
         self.resolucion_editable = False
@@ -50,6 +58,10 @@ class APCDesktopApp(ctk.CTk):
 
         self._crear_layout()
         self._actualizar_estado("Cargue una base o lea el incidente APC para completar el caso actual.")
+        if initial_smart_console:
+            self._cargar_smart_console_path(initial_smart_console)
+            if auto_analizar:
+                self.after(1200, self._leer_y_analizar)
         self.after(700, self._verificar_resoluciones_al_inicio)
 
     def _crear_layout(self) -> None:
@@ -94,6 +106,7 @@ class APCDesktopApp(ctk.CTk):
         botones = [
             ("Cargar Base", self._cargar_base),
             ("Actualizar Resoluciones", self._seleccionar_y_actualizar_resoluciones),
+            ("Cargar Smart Console", self._seleccionar_smart_console),
             ("Pegar Nro en APC", self._copiar_y_pegar_en_apc),
             ("Leer y Analizar", self._leer_y_analizar),
             ("Documentación", self._validar_documentacion),
@@ -296,6 +309,29 @@ class APCDesktopApp(ctk.CTk):
             self._desmarcar_check("Cargar Base")
             messagebox.showerror("Error", str(exc))
 
+    def _seleccionar_smart_console(self) -> None:
+        """Permite elegir una exportacion local de Smart Console."""
+        initial_dir = DEFAULT_SMART_CONSOLE_DIR if DEFAULT_SMART_CONSOLE_DIR.exists() else Path.home()
+        archivo = filedialog.askopenfilename(
+            title="Seleccionar exportacion Smart Console",
+            initialdir=str(initial_dir),
+            filetypes=[("Excel/CSV", "*.xlsx *.xlsm *.xls *.csv"), ("Todos", "*.*")],
+        )
+        if not archivo:
+            return
+
+        self._cargar_smart_console_path(Path(archivo))
+
+    def _cargar_smart_console_path(self, path: Path) -> None:
+        """Carga una exportacion Smart Console ya seleccionada."""
+        self.smart_console_archivos = [path]
+        if not self.incidente_var.get().strip():
+            self.incidente_var.set(path.stem)
+        self._marcar_check("Cargar Smart Console")
+        self._actualizar_estado(
+            f"Smart Console cargado: {path.name}. Use Leer y Analizar para interpretar."
+        )
+
     def _verificar_resoluciones_al_inicio(self) -> None:
         """Detecta si el Excel vigente de resoluciones necesita carga."""
         ruta = self.settings.obtener_ruta_resoluciones_apc()
@@ -431,7 +467,12 @@ class APCDesktopApp(ctk.CTk):
         """Lee el expediente local y genera analisis sugerido."""
         caso = self._caso_desde_campos()
 
-        self.ultimo_analisis = self.motor.analizar_expediente(caso, self.documentos_dir)
+        self.ultimo_analisis = self.motor.analizar_expediente(
+            caso,
+            self.documentos_dir,
+            self.smart_console_archivos,
+        )
+        self._actualizar_caso_desde_analisis(self.ultimo_analisis)
         self.tema_diario_var.set(str(self.ultimo_analisis.get("tema_diario", "")))
         self._set_text(str(self.ultimo_analisis.get("detalle_diario", "")))
         self._preparar_documentacion(abrir_carpeta=False)
@@ -441,6 +482,21 @@ class APCDesktopApp(ctk.CTk):
         self._actualizar_estado(
             self._resumen_analisis_estado(self.ultimo_analisis)
         )
+
+    def _actualizar_caso_desde_analisis(self, analisis: dict[str, Any]) -> None:
+        """Completa campos vacios del caso desde el expediente analizado."""
+        universo = analisis.get("universo_reclamo", {}) or {}
+        smart_console = analisis.get("smart_console", {}) or {}
+        if not self.canal_var.get().strip() and universo.get("canales"):
+            self.canal_var.set(str(universo["canales"][0]))
+        if not self.cuenta_var.get().strip() and universo.get("cuentas"):
+            self.cuenta_var.set(str(universo["cuentas"][0]))
+        if not self.importe_var.get().strip() and universo.get("importe_total_reclamado"):
+            self.importe_base = float(universo.get("importe_total_reclamado") or 0)
+            self._actualizar_importe_por_moneda()
+        if smart_console.get("monedas_detectadas") and self.moneda_var.get() == "Peso":
+            moneda = str(smart_console["monedas_detectadas"][0])
+            self.moneda_var.set("Dolar" if "dolar" in moneda.lower() or "usd" in moneda.lower() else "Peso")
 
     def _preparar_documentacion(self, abrir_carpeta: bool = True) -> None:
         """Prepara carpeta local para descargar documentacion desde APC."""
@@ -516,6 +572,7 @@ class APCDesktopApp(ctk.CTk):
         self.indice_actual = 0
         self.caso_actual = None
         self.ultimo_analisis = None
+        self.smart_console_archivos = []
         self.importe_base = 0.0
         self.moneda_previa = "Peso"
         self.incidente_var.set("")
@@ -719,7 +776,13 @@ class APCDesktopApp(ctk.CTk):
         )
 
 
-def ejecutar_app() -> None:
+def ejecutar_app(
+    smart_console_path: Path | None = None,
+    auto_analizar: bool = False,
+) -> None:
     """Ejecuta la aplicacion desktop."""
-    app = APCDesktopApp()
+    app = APCDesktopApp(
+        initial_smart_console=smart_console_path,
+        auto_analizar=auto_analizar,
+    )
     app.mainloop()

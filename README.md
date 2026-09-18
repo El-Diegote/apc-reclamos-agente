@@ -81,6 +81,12 @@ source .venv/bin/activate
 python main.py
 ```
 
+Abrir la app con una exportacion Smart Console ya cargada:
+
+```bash
+python main.py --smart-console "C:\apc-reclamos-agente\notebook bna\5443060.xlsx" --auto-analizar
+```
+
 Si falta CustomTkinter o Pandas:
 
 ```bash
