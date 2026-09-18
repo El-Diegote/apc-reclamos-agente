@@ -7,6 +7,7 @@ __all__ = [
     "claim_universe_builder",
     "decision_engine",
     "document_classifier",
+    "documentation_analyzer",
     "extractor",
     "resolution_engine",
     "resolution_catalog",

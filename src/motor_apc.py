@@ -17,6 +17,7 @@ from src.claim_universe_builder import ClaimUniverseBuilder
 from src.database import RepositorioAPC
 from src.decision_engine import OperationDecisionEngine
 from src.document_classifier import DocumentClassifier
+from src.documentation_analyzer import DocumentationAnalyzer
 from src.resolution_engine import ResolutionEngine
 from src.resolution_catalog import ResolutionCatalogLoader
 from src.smart_console_analyzer import SmartConsoleAnalyzer
@@ -238,7 +239,8 @@ class MotorAPC:
         """
         caso_normalizado = self._normalizar_registro(caso)
         archivos = self._listar_archivos_expediente(documentos_dir, archivos_extra)
-        documentos = self._clasificar_documentos(archivos)
+        resultado_documentacion = self.analizar_documentacion(documentos_dir)
+        documentos = resultado_documentacion["clasificaciones"]
         smart_console = self._analizar_smart_console(archivos)
 
         universo = ClaimUniverseBuilder(logger=self.logger).construir(
@@ -256,11 +258,15 @@ class MotorAPC:
             universo,
             resoluciones_entrenadas=self.repositorio.listar_resoluciones(),
         )
+        if not resultado_documentacion["documentacion_valida"]:
+            resolucion = self._resolucion_faltan_datos(resultado_documentacion)
 
         analisis_base = self.analizar_caso(caso_normalizado)
         resultado = {
             **analisis_base,
             "documentos_clasificados": documentos,
+            "resultado_documentacion": resultado_documentacion,
+            "operaciones_documentacion": resultado_documentacion["operaciones"],
             "smart_console": smart_console,
             "universo_reclamo": universo,
             "decision_operativa": resolucion["decision"],
@@ -272,6 +278,18 @@ class MotorAPC:
         }
         self.logger.info("Expediente analizado: %s", resultado.get("numero_incidente"))
         return resultado
+
+    def analizar_documentacion(self, documentos_dir: Path | None) -> dict[str, Any]:
+        """Analiza adjuntos locales de la solapa Documentacion.
+
+        Args:
+            documentos_dir: Carpeta donde se descargaron los adjuntos.
+
+        Returns:
+            Resultado documental con validacion y operaciones extraidas.
+        """
+        archivos = self._listar_archivos_documentacion(documentos_dir)
+        return DocumentationAnalyzer(logger=self.logger).analizar(archivos)
 
     def generar_resolucion_sugerida(self, caso: dict[str, Any]) -> str:
         """Genera una resolucion base cuando no hay entrenamiento especifico.
@@ -397,6 +415,16 @@ class MotorAPC:
         """
         return self.repositorio.listar_resoluciones()
 
+    def _listar_archivos_documentacion(self, documentos_dir: Path | None) -> list[Path]:
+        """Lista solo adjuntos de la carpeta de Documentacion."""
+        if documentos_dir is None or not documentos_dir.exists():
+            return []
+        return [
+            archivo
+            for archivo in sorted(documentos_dir.iterdir())
+            if archivo.is_file() and archivo.suffix.lower() in DOCUMENT_EXTENSIONS
+        ]
+
     def _listar_archivos_expediente(
         self,
         documentos_dir: Path | None,
@@ -422,6 +450,37 @@ class MotorAPC:
             if archivo.is_file() and archivo.suffix.lower() in DOCUMENT_EXTENSIONS:
                 archivos.append(archivo)
         return list(dict.fromkeys(archivos))
+
+    def _resolucion_faltan_datos(self, resultado_documentacion: dict[str, Any]) -> dict[str, Any]:
+        """Construye resolucion obligatoria cuando la documentacion no alcanza."""
+        faltantes = resultado_documentacion.get("faltantes", []) or [
+            "No se pudo validar la documentacion adjunta."
+        ]
+        detalle = (
+            "Faltan datos para continuar el analisis documental. "
+            "No se pudo reconstruir de manera suficiente el listado de operaciones "
+            "reclamadas/consultadas desde los adjuntos. "
+            "Informacion faltante o inconsistente: "
+            + "; ".join(str(item) for item in faltantes)
+        )
+        return {
+            "tema": "Devolución",
+            "detalle": detalle,
+            "decision": {
+                "decision": "FALTAN_DATOS",
+                "fundamento": "Documentacion ausente, insuficiente o no traducible a operaciones.",
+                "total_equivalente_usd": 0.0,
+                "requiere_aprobacion_humana": True,
+            },
+            "evaluacion_fraude": {
+                "riesgo_fraude": "sin_evaluar",
+                "senales": [],
+                "denuncia_policial": False,
+                "robo_hurto_extravio": False,
+                "requiere_revision_documental": True,
+            },
+            "fuente": "validacion_documental_faltan_datos",
+        }
 
     def _clasificar_documentos(self, archivos: list[Path]) -> list[dict[str, Any]]:
         """Clasifica documentos locales descargados o aportados.

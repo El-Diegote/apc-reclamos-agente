@@ -43,6 +43,7 @@ class APCDesktopApp(ctk.CTk):
         self.indice_actual = 0
         self.caso_actual: dict[str, Any] | None = None
         self.ultimo_analisis: dict[str, Any] | None = None
+        self.ultimo_resultado_documentacion: dict[str, Any] | None = None
         self.documentos_dir = CORRIDAS_DIR / DEFAULT_CORRIDA / "documentos"
         self.smart_console_archivos: list[Path] = []
         self.importe_base = 0.0
@@ -152,16 +153,24 @@ class APCDesktopApp(ctk.CTk):
             row=7, column=1, padx=14, pady=(10, 14), sticky="e"
         )
 
-        salida = ctk.CTkFrame(main, fg_color="#172033")
+        salida = ctk.CTkTabview(main, fg_color="#172033")
         salida.grid(row=0, column=2, padx=(6, 12), pady=12, sticky="nsew")
         salida.grid_columnconfigure(0, weight=1)
-        salida.grid_rowconfigure(4, weight=1)
-        resolucion_header = ctk.CTkFrame(salida, fg_color="transparent")
+        salida.grid_rowconfigure(0, weight=1)
+        self.resultado_tabs = salida
+        self.resolucion_tab = salida.add("Resolución actual")
+        self.documentacion_tab = salida.add("Resultado Documentación")
+        self.resolucion_tab.grid_columnconfigure(0, weight=1)
+        self.resolucion_tab.grid_rowconfigure(4, weight=1)
+        self.documentacion_tab.grid_columnconfigure(0, weight=1)
+        self.documentacion_tab.grid_rowconfigure(1, weight=1)
+
+        resolucion_header = ctk.CTkFrame(self.resolucion_tab, fg_color="transparent")
         resolucion_header.grid(row=0, column=0, padx=14, pady=(14, 8), sticky="ew")
         resolucion_header.grid_columnconfigure(0, weight=1)
         ctk.CTkLabel(
             resolucion_header,
-            text="Resolucion actual",
+            text="Resolución actual",
             font=ctk.CTkFont(size=16, weight="bold"),
         ).grid(row=0, column=0, sticky="w")
         ctk.CTkButton(
@@ -178,14 +187,21 @@ class APCDesktopApp(ctk.CTk):
             height=30,
             command=self._deshacer_resolucion,
         ).grid(row=0, column=2, padx=(8, 0), sticky="e")
-        ctk.CTkLabel(salida, text="Tema").grid(row=1, column=0, padx=14, pady=(4, 4), sticky="w")
-        self.tema_diario_entry = ctk.CTkEntry(salida, textvariable=self.tema_diario_var)
+        ctk.CTkLabel(self.resolucion_tab, text="Tema").grid(
+            row=1, column=0, padx=14, pady=(4, 4), sticky="w"
+        )
+        self.tema_diario_entry = ctk.CTkEntry(
+            self.resolucion_tab,
+            textvariable=self.tema_diario_var,
+        )
         self.tema_diario_entry.grid(
             row=2, column=0, padx=14, pady=(0, 10), sticky="ew"
         )
         self.tema_diario_entry.bind("<KeyRelease>", self._registrar_cambio_resolucion)
-        ctk.CTkLabel(salida, text="Detalle").grid(row=3, column=0, padx=14, pady=(0, 4), sticky="w")
-        self.resultado_text = ctk.CTkTextbox(salida, height=300)
+        ctk.CTkLabel(self.resolucion_tab, text="Detalle").grid(
+            row=3, column=0, padx=14, pady=(0, 4), sticky="w"
+        )
+        self.resultado_text = ctk.CTkTextbox(self.resolucion_tab, height=300)
         self._configurar_ajuste_detalle()
         self.resultado_text.grid(row=4, column=0, padx=14, pady=(0, 14), sticky="nsew")
         self.resultado_text.bind("<KeyRelease>", self._registrar_cambio_resolucion)
@@ -200,6 +216,19 @@ class APCDesktopApp(ctk.CTk):
         self.tema_diario_entry.configure(state="disabled")
         self.resultado_text.configure(state="disabled")
         self.resolucion_historial = [self._snapshot_resolucion()]
+
+        ctk.CTkLabel(
+            self.documentacion_tab,
+            text="Resultado Documentación",
+            font=ctk.CTkFont(size=16, weight="bold"),
+        ).grid(row=0, column=0, padx=14, pady=(14, 8), sticky="w")
+        self.documentacion_text = ctk.CTkTextbox(self.documentacion_tab, height=360)
+        self._configurar_ajuste_documentacion()
+        self.documentacion_text.grid(row=1, column=0, padx=14, pady=(0, 14), sticky="nsew")
+        self._set_documentacion_text(
+            "Esperando validación de adjuntos.\n\n"
+            "Use Documentación después de descargar los archivos del incidente APC."
+        )
 
         footer = ctk.CTkFrame(self, fg_color="#111827")
         footer.grid(row=2, column=0, padx=16, pady=(0, 16), sticky="ew")
@@ -414,6 +443,11 @@ class APCDesktopApp(ctk.CTk):
         self.cuenta_var.set(str(self.caso_actual.get("numero_cuenta", "")))
         self.tema_diario_var.set("")
         self._set_text("Resolucion pendiente. Use Leer y Analizar cuando el incidente este abierto en APC.")
+        self.ultimo_resultado_documentacion = None
+        self._set_documentacion_text(
+            "Esperando validación de adjuntos.\n\n"
+            "Use Documentación después de descargar los archivos del incidente APC."
+        )
         self._reiniciar_checks()
 
     def _siguiente_reclamo(self) -> None:
@@ -475,12 +509,22 @@ class APCDesktopApp(ctk.CTk):
             self.smart_console_archivos,
         )
         self._actualizar_caso_desde_analisis(self.ultimo_analisis)
+        self.ultimo_resultado_documentacion = self.ultimo_analisis.get("resultado_documentacion")
+        if self.ultimo_resultado_documentacion:
+            self._set_documentacion_text(
+                self._formatear_resultado_documentacion(self.ultimo_resultado_documentacion)
+            )
         self.tema_diario_var.set(str(self.ultimo_analisis.get("tema_diario", "")))
         self._set_text(str(self.ultimo_analisis.get("detalle_diario", "")))
         self._preparar_documentacion(abrir_carpeta=False)
         self._marcar_check("Leer y Analizar")
-        if self.ultimo_analisis.get("documentos_clasificados"):
+        if (
+            self.ultimo_resultado_documentacion
+            and self.ultimo_resultado_documentacion.get("documentacion_valida")
+        ):
             self._marcar_check("Documentación")
+        else:
+            self._desmarcar_check("Documentación")
         self._actualizar_estado(
             self._resumen_analisis_estado(self.ultimo_analisis)
         )
@@ -519,18 +563,40 @@ class APCDesktopApp(ctk.CTk):
     def _validar_documentacion(self) -> None:
         """Valida que los documentos descargados existan y sean legibles."""
         self.documentos_dir.mkdir(parents=True, exist_ok=True)
-        archivos = [archivo for archivo in self.documentos_dir.iterdir() if archivo.is_file()]
-        archivos_validos = [archivo for archivo in archivos if self._archivo_descargado_valido(archivo)]
-        if not archivos_validos:
+        resultado = self.motor.analizar_documentacion(self.documentos_dir)
+        self.ultimo_resultado_documentacion = resultado
+        self._set_documentacion_text(self._formatear_resultado_documentacion(resultado))
+        self.resultado_tabs.set("Resultado Documentación")
+
+        if not resultado.get("documentacion_valida"):
             self._desmarcar_check("Documentación")
-            self._actualizar_estado("No se encontro documentacion descargada para validar.")
+            detalle = self._detalle_faltan_datos_desde_documentacion(resultado)
+            self.tema_diario_var.set("Devolución")
+            self._set_text(detalle)
+            self.ultimo_analisis = {
+                **self._caso_desde_campos(),
+                "tema_diario": "Devolución",
+                "detalle_diario": detalle,
+                "resultado_documentacion": resultado,
+                "operaciones_documentacion": resultado.get("operaciones", []),
+                "decision_operativa": {"decision": "FALTAN_DATOS"},
+                "requiere_aprobacion_humana": True,
+            }
+            self._actualizar_estado(
+                "Documentación insuficiente. Se preparó Resolución actual: Devolución / Faltan datos."
+            )
             messagebox.showwarning(
-                "Sin documentacion",
-                "No se encontraron archivos descargados o los archivos estan vacios.",
+                "Documentación insuficiente",
+                "No se pudo validar la documentación necesaria. Revise la pestaña Resultado Documentación.",
             )
             return
+
         self._marcar_check("Documentación")
-        self._actualizar_estado(f"Documentacion validada: {len(archivos_validos)} archivos.")
+        self._actualizar_estado(
+            "Documentación validada: "
+            f"{resultado.get('archivos_validos', 0)} archivos válidos y "
+            f"{len(resultado.get('operaciones_completas', []) or [])} operaciones completas."
+        )
 
     def _confirmar_limpiar_incidente(self) -> None:
         """Muestra confirmacion antes de limpiar el incidente actual."""
@@ -574,6 +640,7 @@ class APCDesktopApp(ctk.CTk):
         self.indice_actual = 0
         self.caso_actual = None
         self.ultimo_analisis = None
+        self.ultimo_resultado_documentacion = None
         self.smart_console_archivos = []
         self.importe_base = 0.0
         self.moneda_previa = "Peso"
@@ -586,6 +653,10 @@ class APCDesktopApp(ctk.CTk):
         self.cuenta_var.set("")
         self.tema_diario_var.set("")
         self._set_text("Esperando accion.\n\nCargue una Base de Reclamos para iniciar un nuevo incidente.")
+        self._set_documentacion_text(
+            "Esperando validación de adjuntos.\n\n"
+            "Use Documentación después de descargar los archivos del incidente APC."
+        )
         self._reiniciar_checks()
         self._marcar_check("Limpiar")
         self.clipboard_clear()
@@ -709,11 +780,95 @@ class APCDesktopApp(ctk.CTk):
         self.resultado_text.configure(state="disabled")
         self.resolucion_historial = [self._snapshot_resolucion()]
 
+    def _set_documentacion_text(self, texto: str) -> None:
+        """Reemplaza el panel de resultado documental."""
+        limpio = str(texto or "").replace("\r\n", "\n").replace("\r", "\n")
+        texto_formateado = "\n".join(re.sub(r"[ \t]+", " ", linea).strip() for linea in limpio.split("\n"))
+        self.documentacion_text.configure(state="normal")
+        self.documentacion_text.delete("1.0", "end")
+        self.documentacion_text.insert("1.0", texto_formateado)
+        self.documentacion_text.configure(state="disabled")
+
     def _configurar_ajuste_detalle(self) -> None:
         """Configura el ajuste visual del Detalle por palabra."""
         textbox = getattr(self.resultado_text, "_textbox", None)
         if textbox is not None:
             textbox.configure(wrap="word")
+
+    def _configurar_ajuste_documentacion(self) -> None:
+        """Configura el ajuste visual de Resultado Documentacion por palabra."""
+        textbox = getattr(self.documentacion_text, "_textbox", None)
+        if textbox is not None:
+            textbox.configure(wrap="word")
+
+    def _formatear_resultado_documentacion(self, resultado: dict[str, Any]) -> str:
+        """Convierte la validacion documental en texto visible para la app."""
+        estado = "VALIDA" if resultado.get("documentacion_valida") else "OBSERVADA"
+        lineas = [
+            f"Estado documentación: {estado}",
+            f"Archivos encontrados: {resultado.get('total_archivos', 0)}",
+            f"Archivos válidos: {resultado.get('archivos_validos', 0)}",
+        ]
+
+        clasificaciones = resultado.get("clasificaciones", []) or []
+        if clasificaciones:
+            lineas.append("")
+            lineas.append("Clasificación de adjuntos:")
+            for clasificacion in clasificaciones:
+                tipo = clasificacion.get("tipo_documento", "Otro")
+                confianza = clasificacion.get("confianza", 0)
+                senales = ", ".join(clasificacion.get("senales", []) or [])
+                lineas.append(
+                    f"- {clasificacion.get('archivo', '')}: {tipo} "
+                    f"(confianza {float(confianza):.2f})"
+                    + (f". Señales: {senales}" if senales else "")
+                )
+
+        operaciones = resultado.get("operaciones", []) or []
+        lineas.append("")
+        lineas.append("Operaciones reclamadas/consultadas:")
+        if not operaciones:
+            lineas.append("- No se pudo reconstruir un listado de operaciones.")
+        for indice, operacion in enumerate(operaciones, start=1):
+            importe = operacion.get("importe") or 0
+            moneda = operacion.get("moneda") or "Peso"
+            partes = [
+                f"Fecha: {operacion.get('fecha') or 'sin dato'}",
+                f"Hora: {operacion.get('hora') or 'sin dato'}",
+                f"Importe: {moneda} {float(importe):.2f}" if importe else "Importe: sin dato",
+                f"Cuenta: {operacion.get('cuenta') or 'sin dato'}",
+                f"Motivo: {operacion.get('motivo') or operacion.get('descripcion') or 'sin dato'}",
+                f"Archivo: {operacion.get('archivo') or 'sin dato'}",
+                f"Referencia: {operacion.get('referencia') or 'sin dato'}",
+            ]
+            lineas.append(f"{indice}. " + " | ".join(partes))
+
+        advertencias = resultado.get("advertencias", []) or []
+        if advertencias:
+            lineas.append("")
+            lineas.append("Advertencias:")
+            lineas.extend(f"- {advertencia}" for advertencia in advertencias)
+
+        faltantes = resultado.get("faltantes", []) or []
+        if faltantes:
+            lineas.append("")
+            lineas.append("Información faltante o inconsistente:")
+            lineas.extend(f"- {faltante}" for faltante in faltantes)
+
+        return "\n".join(lineas)
+
+    def _detalle_faltan_datos_desde_documentacion(self, resultado: dict[str, Any]) -> str:
+        """Arma el Detalle obligatorio cuando la documentacion no alcanza."""
+        faltantes = resultado.get("faltantes", []) or [
+            "No se pudo validar la documentación adjunta."
+        ]
+        return (
+            "Faltan datos para continuar el análisis del reclamo. "
+            "La documentación descargada no permite reconstruir con certeza las "
+            "operaciones reclamadas/consultadas. "
+            "Información faltante o inconsistente: "
+            + "; ".join(str(item) for item in faltantes)
+        )
 
     def _formatear_detalle_para_lectura(self, texto: str) -> str:
         """Normaliza el Detalle para lectura en pantalla.

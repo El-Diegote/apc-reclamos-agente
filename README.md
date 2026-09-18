@@ -28,6 +28,7 @@ Incluido:
 - Motor de sugerencias por resoluciones entrenadas y reglas base.
 - Analizador inicial de exportaciones Smart Console.
 - Clasificador documental inicial para F60330, denuncias, extractos, comprobantes, dictamenes y notas.
+- Pestaña `Resultado Documentación` para validar adjuntos y listar operaciones detectadas antes del analisis.
 - Constructor de expediente consolidado para decidir sobre el caso completo y no sobre documentos aislados.
 - Motor inicial de decision y resolucion sugerida con aprobacion humana obligatoria.
 - Carga versionada del archivo `RESOLUCIONES APC.xlsx`, sin versionar el archivo real.
@@ -41,6 +42,8 @@ Flujo actual del boton `Leer y Analizar`:
 - Toma el caso visible en pantalla.
 - Revisa la carpeta local de documentacion de la corrida.
 - Clasifica documentos disponibles.
+- Valida si los adjuntos permiten reconstruir operaciones reclamadas con fecha, hora e importe.
+- Fuerza `Tema: Devolución` y `Detalle: Faltan datos` cuando la documentacion esta ausente, ilegible, incompleta o inconsistente.
 - Detecta y analiza una exportacion compatible de Smart Console.
 - Construye el expediente consolidado.
 - Genera `Tema` y `Detalle` sugeridos para Diario APC.
@@ -185,6 +188,7 @@ apc-reclamos-agente/
 │   ├── database.py
 │   ├── decision_engine.py
 │   ├── document_classifier.py
+│   ├── documentation_analyzer.py
 │   ├── extractor.py
 │   ├── motor_apc.py
 │   ├── resolution_engine.py

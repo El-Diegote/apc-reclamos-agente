@@ -144,3 +144,12 @@
 
 - Se ordena la barra lateral como `Cargar Base`, `Actualizar Resoluciones`, `Número APC`, `Documentación`, `Cargar Smart Console`, `Leer y Analizar`, `Informar Resolución` y `Limpiar`.
 - El boton anterior `Pegar Nro en APC` pasa a llamarse `Número APC`.
+
+## Iteracion 18 - Resultado Documentacion
+
+- Se agrega `DocumentationAnalyzer` para validar adjuntos descargados de la solapa `Documentacion`.
+- La app incorpora la pestaña `Resultado Documentación` con estado documental, clasificacion de adjuntos y listado de operaciones reclamadas/consultadas.
+- El listado intenta reconstruir fecha, hora, importe, cuenta, motivo, archivo y referencia de cada movimiento detectado.
+- Si no hay adjuntos, hay errores de formato, datos insuficientes, informacion inconsistente o archivos no traducibles a operaciones, se fuerza `Tema: Devolución`.
+- En esos casos el `Detalle` queda como `Faltan datos` y enumera la informacion faltante para que el analista pueda pedir regularizacion.
+- La descarga real desde APC sigue pendiente del mapeo de pantalla; hasta entonces la validacion opera sobre la carpeta local de documentacion de la corrida.
