@@ -8,6 +8,7 @@ __all__ = [
     "document_classifier",
     "extractor",
     "resolution_engine",
+    "resolution_catalog",
     "smart_console_analyzer",
     "utils",
 ]

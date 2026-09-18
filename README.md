@@ -30,6 +30,7 @@ Incluido:
 - Clasificador documental inicial para F60330, denuncias, extractos, comprobantes, dictamenes y notas.
 - Constructor de expediente consolidado para decidir sobre el caso completo y no sobre documentos aislados.
 - Motor inicial de decision y resolucion sugerida con aprobacion humana obligatoria.
+- Carga versionada del archivo `RESOLUCIONES APC.xlsx`, sin versionar el archivo real.
 - Modo CLI para corrida simulada.
 - Ventana simple para operar en paralelo con APC.
 - Barra lateral con botones funcionales: cargar base, pegar numero en APC, leer y analizar, validar documentacion, informar resolucion en Diario y limpiar el incidente actual.

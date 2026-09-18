@@ -116,3 +116,11 @@
 - La documentacion local se clasifica con reglas auditables y sin subir archivos reales al repositorio.
 - La primera exportacion tabular compatible se intenta interpretar como Smart Console para generar operaciones, totales y senales LINK GO/ROBO.
 - El resultado completa `Tema` y `Detalle` en `Resolucion actual`, siempre sujeto a revision humana.
+
+## Iteracion 14 - RESOLUCIONES APC versionado
+
+- Se agrega `ResolutionCatalogLoader` para leer `RESOLUCIONES APC.xlsx` como catalogo local sin versionar el archivo real.
+- La carga detecta encabezados `TEMA`/`NOTA` sin depender de una fila fija.
+- Las resoluciones entrenadas guardan origen, version del archivo, hoja, fila y vigencias opcionales.
+- El coeficiente dolar se extrae desde la zona del catalogo y actualiza el motor al entrenar.
+- Se evita duplicar una misma fila cuando se vuelve a cargar exactamente la misma version del archivo.

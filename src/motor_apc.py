@@ -18,6 +18,7 @@ from src.database import RepositorioAPC
 from src.decision_engine import OperationDecisionEngine
 from src.document_classifier import DocumentClassifier
 from src.resolution_engine import ResolutionEngine
+from src.resolution_catalog import ResolutionCatalogLoader
 from src.smart_console_analyzer import SmartConsoleAnalyzer
 from src.utils import parsear_importe, timestamp_actual
 
@@ -102,35 +103,36 @@ class MotorAPC:
         Raises:
             ValueError: Si el archivo no contiene hojas aprovechables.
         """
-        entrenadas = 0
-        excel = pd.ExcelFile(archivo)
+        cargador = ResolutionCatalogLoader(logger=self.logger)
+        catalogo = cargador.cargar(archivo)
+        coeficiente = cargador.seleccionar_coeficiente_dolar(catalogo)
+        if coeficiente:
+            self.coeficiente_dolar = coeficiente
+            self.logger.info("Coeficiente dolar actualizado desde catalogo de resoluciones")
 
-        for hoja in excel.sheet_names:
-            dataframe = pd.read_excel(archivo, sheet_name=hoja)
-            dataframe = dataframe.dropna(how="all").dropna(axis=1, how="all")
-            self._actualizar_coeficiente_dolar(dataframe)
-            columnas = {str(columna).strip().upper(): columna for columna in dataframe.columns}
-
-            if "TEMA" not in columnas or "NOTA" not in columnas:
-                self.logger.info("Hoja omitida sin TEMA/NOTA: %s", hoja)
-                continue
-
-            for _, fila in dataframe.iterrows():
-                tema = str(fila.get(columnas["TEMA"], "") or "").strip()
-                nota = str(fila.get(columnas["NOTA"], "") or "").strip()
-                if not tema or not nota or tema.lower() == "nan" or nota.lower() == "nan":
-                    continue
-
-                self.repositorio.entrenar_resolucion(
-                    canal=self._inferir_canal_desde_tema(tema),
-                    motivo=tema,
-                    texto_resolucion=nota,
-                    texto_diario=self._generar_diario_desde_nota(tema, nota),
-                )
-                entrenadas += 1
-
-        if entrenadas == 0:
+        resoluciones_catalogo = catalogo["resoluciones"]
+        if not resoluciones_catalogo:
             raise ValueError("No se encontraron resoluciones con columnas TEMA y NOTA.")
+
+        total_inicial = len(self.repositorio.listar_resoluciones())
+        for resolucion in catalogo["resoluciones"]:
+            self.repositorio.entrenar_resolucion(
+                canal=resolucion["canal"],
+                motivo=resolucion["tema"],
+                texto_resolucion=resolucion["nota"],
+                texto_diario=self._generar_diario_desde_nota(
+                    resolucion["tema"],
+                    resolucion["nota"],
+                ),
+                origen_archivo=resolucion["origen_archivo"],
+                version_origen=resolucion["version_origen"],
+                hoja=resolucion["hoja"],
+                fila=int(resolucion["fila"]),
+                vigencia_desde=resolucion["vigencia_desde"],
+                vigencia_hasta=resolucion["vigencia_hasta"],
+            )
+
+        entrenadas = len(self.repositorio.listar_resoluciones()) - total_inicial
 
         self.logger.info("Resoluciones entrenadas desde Excel: %s", entrenadas)
         return entrenadas

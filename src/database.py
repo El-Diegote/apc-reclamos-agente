@@ -52,6 +52,12 @@ class RepositorioAPC:
                     texto_diario TEXT NOT NULL,
                     prioridad INTEGER DEFAULT 1,
                     activa INTEGER DEFAULT 1,
+                    origen_archivo TEXT DEFAULT '',
+                    version_origen TEXT DEFAULT '',
+                    hoja TEXT DEFAULT '',
+                    fila INTEGER DEFAULT 0,
+                    vigencia_desde TEXT DEFAULT '',
+                    vigencia_hasta TEXT DEFAULT '',
                     creado_en TEXT DEFAULT CURRENT_TIMESTAMP
                 );
 
@@ -83,7 +89,26 @@ class RepositorioAPC:
                 );
                 """
             )
+            self._migrar_resoluciones(conexion)
         self.logger.info("Base SQLite inicializada en %s", self.db_path)
+
+    def _migrar_resoluciones(self, conexion: sqlite3.Connection) -> None:
+        """Agrega columnas nuevas para versionar resoluciones existentes."""
+        columnas = {
+            fila["name"]
+            for fila in conexion.execute("PRAGMA table_info(resoluciones)").fetchall()
+        }
+        migraciones = {
+            "origen_archivo": "TEXT DEFAULT ''",
+            "version_origen": "TEXT DEFAULT ''",
+            "hoja": "TEXT DEFAULT ''",
+            "fila": "INTEGER DEFAULT 0",
+            "vigencia_desde": "TEXT DEFAULT ''",
+            "vigencia_hasta": "TEXT DEFAULT ''",
+        }
+        for columna, definicion in migraciones.items():
+            if columna not in columnas:
+                conexion.execute(f"ALTER TABLE resoluciones ADD COLUMN {columna} {definicion}")
 
     def entrenar_resolucion(
         self,
@@ -92,6 +117,12 @@ class RepositorioAPC:
         texto_resolucion: str,
         texto_diario: str,
         prioridad: int = 1,
+        origen_archivo: str = "",
+        version_origen: str = "",
+        hoja: str = "",
+        fila: int = 0,
+        vigencia_desde: str = "",
+        vigencia_hasta: str = "",
     ) -> int:
         """Guarda una resolucion modelo.
 
@@ -101,22 +132,82 @@ class RepositorioAPC:
             texto_resolucion: Texto sugerido para resolver el caso.
             texto_diario: Texto sugerido para cargar en Diario.
             prioridad: Prioridad de coincidencia.
+            origen_archivo: Archivo local usado como fuente.
+            version_origen: Version calculada del archivo fuente.
+            hoja: Hoja del Excel fuente.
+            fila: Fila del Excel fuente.
+            vigencia_desde: Vigencia inicial si existe en el archivo.
+            vigencia_hasta: Vigencia final si existe en el archivo.
 
         Returns:
             ID de la resolucion creada.
         """
+        existente = self._buscar_resolucion_existente(
+            canal=canal,
+            motivo=motivo,
+            texto_resolucion=texto_resolucion,
+            version_origen=version_origen,
+            hoja=hoja,
+            fila=fila,
+        )
+        if existente:
+            return existente
+
         with self._conectar() as conexion:
             cursor = conexion.execute(
                 """
                 INSERT INTO resoluciones
-                    (canal, motivo, texto_resolucion, texto_diario, prioridad)
-                VALUES (?, ?, ?, ?, ?)
+                    (canal, motivo, texto_resolucion, texto_diario, prioridad,
+                     origen_archivo, version_origen, hoja, fila, vigencia_desde,
+                     vigencia_hasta)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (canal, motivo, texto_resolucion, texto_diario, prioridad),
+                (
+                    canal,
+                    motivo,
+                    texto_resolucion,
+                    texto_diario,
+                    prioridad,
+                    origen_archivo,
+                    version_origen,
+                    hoja,
+                    fila,
+                    vigencia_desde,
+                    vigencia_hasta,
+                ),
             )
             resolucion_id = int(cursor.lastrowid)
         self.logger.info("Resolucion entrenada: %s", resolucion_id)
         return resolucion_id
+
+    def _buscar_resolucion_existente(
+        self,
+        canal: str,
+        motivo: str,
+        texto_resolucion: str,
+        version_origen: str,
+        hoja: str,
+        fila: int,
+    ) -> int:
+        """Evita duplicar una misma fila de catalogo ya entrenada."""
+        if not version_origen:
+            return 0
+        with self._conectar() as conexion:
+            fila_db = conexion.execute(
+                """
+                SELECT id
+                FROM resoluciones
+                WHERE canal = ?
+                  AND motivo = ?
+                  AND texto_resolucion = ?
+                  AND version_origen = ?
+                  AND hoja = ?
+                  AND fila = ?
+                LIMIT 1
+                """,
+                (canal, motivo, texto_resolucion, version_origen, hoja, fila),
+            ).fetchone()
+        return int(fila_db["id"]) if fila_db else 0
 
     def listar_resoluciones(self) -> list[dict[str, Any]]:
         """Lista resoluciones activas.
@@ -127,7 +218,9 @@ class RepositorioAPC:
         with self._conectar() as conexion:
             filas = conexion.execute(
                 """
-                SELECT id, canal, motivo, texto_resolucion, texto_diario, prioridad
+                SELECT id, canal, motivo, texto_resolucion, texto_diario, prioridad,
+                       origen_archivo, version_origen, hoja, fila,
+                       vigencia_desde, vigencia_hasta
                 FROM resoluciones
                 WHERE activa = 1
                 ORDER BY prioridad DESC, id DESC
